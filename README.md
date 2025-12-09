@@ -1,36 +1,183 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Knowledge Sharing App
+
+A full-stack web application built with Next.js 16, TypeScript, Tailwind CSS, NextAuth.js, and Supabase for sharing knowledge through articles, code snippets, and learning resources.
+
+## Features
+
+- 🔐 **User Authentication** - Secure sign-up and login with NextAuth.js
+- 📝 **Articles** - Create and share in-depth articles
+- 💻 **Code Snippets** - Share code with syntax highlighting
+- 📚 **Learning Resources** - Curate and share learning materials
+- 🔍 **Search & Filter** - Find resources easily with search and tag filtering
+- 🎨 **Modern UI** - Clean, responsive design with Tailwind CSS
+- ☁️ **Cloud Deployment** - Ready to deploy on Vercel
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS 4
+- **Authentication:** NextAuth.js
+- **Database:** Supabase (PostgreSQL)
+- **Deployment:** Vercel
+
+## Prerequisites
+
+- Node.js 18+ installed
+- A Supabase account and project
+- npm or yarn package manager
 
 ## Getting Started
 
-First, run the development server:
+### 1. Clone the repository
+
+```bash
+git clone <your-repo-url>
+cd knowledge-sharing-app
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Set up Supabase
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Settings > API to find your project URL and anon key
+3. Go to the SQL Editor and run the schema from `supabase-schema.sql`
+
+### 4. Configure environment variables
+
+Copy `.env.example` to `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
+Update `.env.local` with your credentials:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+```
+
+Generate a NextAuth secret:
+
+```bash
+openssl rand -base64 32
+```
+
+### 5. Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+knowledge-sharing-app/
+├── app/                          # Next.js App Router
+│   ├── api/                      # API routes
+│   │   ├── articles/            # Article CRUD endpoints
+│   │   ├── code-snippets/       # Code snippet endpoints
+│   │   ├── learning-resources/  # Learning resource endpoints
+│   │   └── auth/                # NextAuth configuration
+│   ├── articles/                # Article pages
+│   ├── code-snippets/           # Code snippet pages
+│   ├── learning-resources/      # Learning resource pages
+│   ├── auth/                    # Authentication pages
+│   ├── layout.tsx               # Root layout
+│   └── page.tsx                 # Home page
+├── components/                   # Reusable React components
+│   ├── Header.tsx               # Navigation header
+│   ├── ResourceCard.tsx         # Resource display card
+│   ├── SearchBar.tsx            # Search input
+│   ├── Filter.tsx               # Tag filter
+│   ├── CodeHighlighter.tsx      # Syntax highlighting
+│   └── SessionProvider.tsx      # Auth session wrapper
+├── lib/                         # Utility functions
+│   ├── auth.ts                  # NextAuth configuration
+│   ├── auth-utils.ts            # Auth helper functions
+│   ├── supabase.ts              # Supabase client
+│   └── utils.ts                 # General utilities
+├── types/                       # TypeScript type definitions
+│   ├── supabase.ts              # Database types
+│   ├── index.ts                 # App types
+│   └── next-auth.d.ts           # NextAuth type extensions
+├── public/                      # Static assets
+├── supabase-schema.sql          # Database schema
+├── .env.example                 # Environment variables template
+└── package.json                 # Dependencies
+```
 
-## Learn More
+## Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+The app uses three main tables:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **articles** - Long-form written content
+- **code_snippets** - Code examples with syntax highlighting
+- **learning_resources** - External learning materials (videos, courses, docs)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+All tables include:
 
-## Deploy on Vercel
+- User authentication and ownership
+- Tags for categorization
+- Timestamps for creation and updates
+- Row Level Security (RLS) policies
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Deploy to Vercel
+
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com)
+3. Import your repository
+4. Add environment variables in Vercel project settings
+5. Deploy!
+
+Update `NEXTAUTH_URL` in your environment variables to your production URL.
+
+## API Endpoints
+
+### Articles
+
+- `GET /api/articles` - List all articles
+- `POST /api/articles` - Create article (auth required)
+- `GET /api/articles/[id]` - Get single article
+- `PUT /api/articles/[id]` - Update article (owner only)
+- `DELETE /api/articles/[id]` - Delete article (owner only)
+
+### Code Snippets
+
+- `GET /api/code-snippets` - List all snippets
+- `POST /api/code-snippets` - Create snippet (auth required)
+- `GET /api/code-snippets/[id]` - Get single snippet
+- `PUT /api/code-snippets/[id]` - Update snippet (owner only)
+- `DELETE /api/code-snippets/[id]` - Delete snippet (owner only)
+
+### Learning Resources
+
+- `GET /api/learning-resources` - List all resources
+- `POST /api/learning-resources` - Create resource (auth required)
+- `GET /api/learning-resources/[id]` - Get single resource
+- `PUT /api/learning-resources/[id]` - Update resource (owner only)
+- `DELETE /api/learning-resources/[id]` - Delete resource (owner only)
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT License - feel free to use this project for your own purposes.
