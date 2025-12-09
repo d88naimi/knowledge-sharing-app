@@ -1,6 +1,12 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { supabase } from "./supabase";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// Create admin client for auth operations
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -15,20 +21,68 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: credentials.email,
-          password: credentials.password,
-        });
+        try {
+          // First, verify the user exists and get their ID
+          const { data: authUser, error: authError } = await supabaseAdmin
+            .from("users")
+            .select("*")
+            .eq("email", credentials.email)
+            .single();
 
-        if (error || !data.user) {
+          if (authError || !authUser) {
+            return null;
+          }
+
+          // Verify password by attempting sign in
+          const { data: signInData, error: signInError } = 
+            await supabaseAdmin.auth.signInWithPassword({
+              email: credentials.email,
+              password: credentials.password,
+            });
+
+          // If sign in fails due to email not confirmed, but user exists, 
+          // confirm them and try again
+          if (signInError?.message?.includes("Email not confirmed")) {
+            // Update user to confirmed
+            const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+              authUser.id,
+              { email_confirm: true }
+            );
+
+            if (updateError) {
+              return null;
+            }
+
+            // Try signing in again
+            const { data: retryData, error: retryError } = 
+              await supabaseAdmin.auth.signInWithPassword({
+                email: credentials.email,
+                password: credentials.password,
+              });
+
+            if (retryError || !retryData.user) {
+              return null;
+            }
+
+            return {
+              id: retryData.user.id,
+              email: retryData.user.email!,
+              name: authUser.name || retryData.user.email,
+            };
+          }
+
+          if (signInError || !signInData.user) {
+            return null;
+          }
+
+          return {
+            id: signInData.user.id,
+            email: signInData.user.email!,
+            name: authUser.name || signInData.user.email,
+          };
+        } catch {
           return null;
         }
-
-        return {
-          id: data.user.id,
-          email: data.user.email!,
-          name: data.user.user_metadata?.name || data.user.email,
-        };
       },
     }),
   ],
@@ -36,22 +90,27 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
       }
       return session;
     },
   },
   pages: {
     signIn: "/auth/signin",
-    signOut: "/auth/signout",
+    error: "/auth/signin", // Redirect to signin on error
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

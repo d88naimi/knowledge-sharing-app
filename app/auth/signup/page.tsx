@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -19,37 +18,27 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-          },
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+        }),
       });
 
-      if (signUpError) {
-        setError(signUpError.message);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Failed to create account");
         return;
       }
 
-      if (data.user) {
-        // Insert user profile
-        const { error: profileError } = await supabase.from("users").insert([
-          {
-            id: data.user.id,
-            email: data.user.email!,
-            name,
-          },
-        ]);
-
-        if (profileError) {
-          console.error("Profile creation error:", profileError);
-        }
-
-        router.push("/auth/signin?message=Account created! Please sign in.");
-      }
+      // Success! Redirect to sign in
+      router.push("/auth/signin?message=Account created! Please sign in.");
     } catch (error) {
       setError("An error occurred. Please try again.");
     } finally {
