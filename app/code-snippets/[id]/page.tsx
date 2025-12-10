@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { CodeSnippet } from "@/types";
 import { formatDate } from "@/lib/utils";
 import CodeHighlighter from "@/components/CodeHighlighter";
+import DeleteDialog from "@/components/DeleteDialog";
 
 export default function CodeSnippetDetailPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function CodeSnippetDetailPage() {
   const { data: session } = useSession();
   const [snippet, setSnippet] = useState<CodeSnippet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (params?.id) {
@@ -39,8 +41,6 @@ export default function CodeSnippetDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this code snippet?")) return;
-
     try {
       const response = await fetch(`/api/code-snippets/${params?.id}`, {
         method: "DELETE",
@@ -117,7 +117,7 @@ export default function CodeSnippetDetailPage() {
               Edit
             </button>
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
             >
               Delete
@@ -125,6 +125,13 @@ export default function CodeSnippetDetailPage() {
           </div>
         )}
       </div>
+
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        resourceType="code snippet"
+      />
     </div>
   );
 }

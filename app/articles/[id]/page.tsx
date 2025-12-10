@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Article } from "@/types";
 import { formatDate } from "@/lib/utils";
+import DeleteDialog from "@/components/DeleteDialog";
 
 export default function ArticleDetailPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function ArticleDetailPage() {
   const { data: session } = useSession();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (params?.id) {
@@ -37,8 +39,6 @@ export default function ArticleDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this article?")) return;
-
     try {
       const response = await fetch(`/api/articles/${params?.id}`, {
         method: "DELETE",
@@ -108,7 +108,7 @@ export default function ArticleDetailPage() {
               Edit
             </button>
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
             >
               Delete
@@ -116,6 +116,13 @@ export default function ArticleDetailPage() {
           </div>
         )}
       </article>
+
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        resourceType="article"
+      />
     </div>
   );
 }
