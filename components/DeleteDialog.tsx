@@ -18,11 +18,8 @@ export default function DeleteDialog({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={onClose}
-      />
-      
+      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+
       {/* Dialog */}
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <div className="bg-white border border-slate-300 rounded-md p-6 max-w-md w-full flex flex-col gap-4">
@@ -32,7 +29,8 @@ export default function DeleteDialog({
               Are you sure you want to delete this {resourceType}?
             </h2>
             <p className="text-sm text-slate-500 leading-5">
-              This action cannot be undone. This will permanently delete your {resourceType} and remove your data from our servers.
+              This action cannot be undone. This will permanently delete your{" "}
+              {resourceType} and remove your data from our servers.
             </p>
           </div>
 

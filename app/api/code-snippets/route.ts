@@ -9,38 +9,40 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
-    persistSession: false
-  }
+    persistSession: false,
+  },
 });
 
 // GET all code snippets
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const language = searchParams.get('language');
-    const tags = searchParams.get('tags')?.split(',').filter(Boolean);
+    const search = searchParams.get("search");
+    const language = searchParams.get("language");
+    const tags = searchParams.get("tags")?.split(",").filter(Boolean);
 
     let query = supabase
-      .from('code_snippets')
-      .select(`
+      .from("code_snippets")
+      .select(
+        `
         *,
         users (
           name
         )
-      `)
-      .order('created_at', { ascending: false });
+      `
+      )
+      .order("created_at", { ascending: false });
 
     if (search) {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
     if (language) {
-      query = query.eq('language', language);
+      query = query.eq("language", language);
     }
 
     if (tags && tags.length > 0) {
-      query = query.contains('tags', tags);
+      query = query.contains("tags", tags);
     }
 
     const { data, error } = await query;
@@ -57,7 +59,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(snippets);
   } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -72,13 +77,13 @@ export async function POST(request: NextRequest) {
 
     if (!title || !code || !language) {
       return NextResponse.json(
-        { error: 'Title, code, and language are required' },
+        { error: "Title, code, and language are required" },
         { status: 400 }
       );
     }
 
     const { data, error: insertError } = await supabase
-      .from('code_snippets')
+      .from("code_snippets")
       .insert([
         {
           title,
@@ -98,6 +103,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: 201 });
   } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

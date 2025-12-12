@@ -9,8 +9,8 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
-    persistSession: false
-  }
+    persistSession: false,
+  },
 });
 
 export const authOptions: NextAuthOptions = {
@@ -39,27 +39,27 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Verify password by attempting sign in
-          const { data: signInData, error: signInError } = 
+          const { data: signInData, error: signInError } =
             await supabaseAdmin.auth.signInWithPassword({
               email: credentials.email,
               password: credentials.password,
             });
 
-          // If sign in fails due to email not confirmed, but user exists, 
+          // If sign in fails due to email not confirmed, but user exists,
           // confirm them and try again
           if (signInError?.message?.includes("Email not confirmed")) {
             // Update user to confirmed
-            const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-              authUser.id,
-              { email_confirm: true }
-            );
+            const { error: updateError } =
+              await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+                email_confirm: true,
+              });
 
             if (updateError) {
               return null;
             }
 
             // Try signing in again
-            const { data: retryData, error: retryError } = 
+            const { data: retryData, error: retryError } =
               await supabaseAdmin.auth.signInWithPassword({
                 email: credentials.email,
                 password: credentials.password,

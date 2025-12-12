@@ -24,7 +24,7 @@ export default function CodeSnippetsPage() {
 
   const fetchSnippets = useCallback(async () => {
     if (status !== "authenticated") return;
-    
+
     try {
       const url = searchQuery
         ? `/api/code-snippets?search=${encodeURIComponent(searchQuery)}`

@@ -10,9 +10,9 @@ export default function Header() {
   const router = useRouter();
 
   const handleSignOut = async () => {
-    await signOut({ 
+    await signOut({
       redirect: false,
-      callbackUrl: "/auth/signin" 
+      callbackUrl: "/auth/signin",
     });
     router.push("/auth/signin");
     router.refresh();

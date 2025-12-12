@@ -24,7 +24,7 @@ export default function LearningResourcesPage() {
 
   const fetchResources = useCallback(async () => {
     if (status !== "authenticated") return;
-    
+
     try {
       const url = searchQuery
         ? `/api/learning-resources?search=${encodeURIComponent(searchQuery)}`
