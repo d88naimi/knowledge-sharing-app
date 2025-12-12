@@ -29,7 +29,7 @@ export default function Filter({
             onClick={() => toggleTag(tag)}
             className={`px-3 py-1 rounded-full text-sm transition ${
               selectedTags.includes(tag)
-                ? "bg-blue-600 text-white"
+                ? "bg-slate-900 text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >

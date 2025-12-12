@@ -11,17 +11,23 @@ import DeleteDialog from "@/components/DeleteDialog";
 export default function CodeSnippetDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [snippet, setSnippet] = useState<CodeSnippet | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
-    if (params?.id) {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (params?.id && status === "authenticated") {
       fetchSnippet();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params?.id]);
+  }, [params?.id, status]);
 
   const fetchSnippet = async () => {
     try {
@@ -54,12 +60,16 @@ export default function CodeSnippetDetailPage() {
     }
   };
 
-  if (loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="text-center py-20">
-        <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
   }
 
   if (!snippet) {
@@ -112,13 +122,13 @@ export default function CodeSnippetDetailPage() {
           <div className="flex gap-4 pt-6 border-t">
             <button
               onClick={() => router.push(`/code-snippets/${snippet.id}/edit`)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
             >
               Edit
             </button>
             <button
               onClick={() => setShowDeleteDialog(true)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              className="px-4 py-2 border border-slate-200 text-slate-900 rounded-lg hover:bg-slate-50 transition"
             >
               Delete
             </button>

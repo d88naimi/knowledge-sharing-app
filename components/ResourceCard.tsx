@@ -14,17 +14,23 @@ export default function ResourceCard({ resource, type }: ResourceCardProps) {
   const getIcon = () => {
     switch (type) {
       case "article":
-        return <BookOpen className="text-blue-600" size={20} />;
+        return <BookOpen className="text-slate-900" size={20} />;
       case "code_snippet":
-        return <Code className="text-green-600" size={20} />;
+        return <Code className="text-slate-900" size={20} />;
       case "learning_resource":
-        return <GraduationCap className="text-purple-600" size={20} />;
+        return <GraduationCap className="text-slate-900" size={20} />;
     }
   };
 
   const getLink = () => {
-    const slug = type.replace("_", "-");
-    return `/${slug}/${resource.id}`;
+    switch (type) {
+      case "article":
+        return `/articles/${resource.id}`;
+      case "code_snippet":
+        return `/code-snippets/${resource.id}`;
+      case "learning_resource":
+        return `/learning-resources/${resource.id}`;
+    }
   };
 
   return (
@@ -72,7 +78,7 @@ export default function ResourceCard({ resource, type }: ResourceCardProps) {
             {resource.tags.slice(0, 3).map((tag, index) => (
               <span
                 key={index}
-                className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded"
+                className="px-2 py-1 bg-slate-100 text-slate-900 text-xs rounded"
               >
                 #{tag}
               </span>

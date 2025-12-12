@@ -69,6 +69,9 @@ export const authOptions: NextAuthOptions = {
               return null;
             }
 
+            // Sign out from Supabase immediately after verification
+            await supabaseAdmin.auth.signOut();
+
             return {
               id: retryData.user.id,
               email: retryData.user.email!,
@@ -79,6 +82,10 @@ export const authOptions: NextAuthOptions = {
           if (signInError || !signInData.user) {
             return null;
           }
+
+          // Sign out from Supabase immediately after verification
+          // We only use Supabase for password verification, not session management
+          await supabaseAdmin.auth.signOut();
 
           return {
             id: signInData.user.id,
@@ -116,6 +123,16 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  events: {
+    async signOut() {
+      // Clean up any Supabase sessions when user signs out
+      try {
+        await supabaseAdmin.auth.signOut();
+      } catch {
+        // Ignore errors during cleanup
+      }
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
