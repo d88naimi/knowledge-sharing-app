@@ -1,24 +1,45 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { Article, CodeSnippet, LearningResource } from "@/types";
-import { BookOpen, Code, GraduationCap, User, Calendar } from "lucide-react";
+import { Newspaper, Code, ExternalLink, Pencil, Trash2, CircleUser } from "lucide-react";
+import { useSession } from "next-auth/react";
+import DeleteDialog from "@/components/DeleteDialog";
 
 interface ResourceCardProps {
   resource: Article | CodeSnippet | LearningResource;
   type: "article" | "code_snippet" | "learning_resource";
+  onDelete?: () => void;
 }
 
-export default function ResourceCard({ resource, type }: ResourceCardProps) {
+export default function ResourceCard({ resource, type, onDelete }: ResourceCardProps) {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const isOwner = session?.user?.id === resource.author_id;
+
   const getIcon = () => {
     switch (type) {
       case "article":
-        return <BookOpen className="text-slate-900" size={20} />;
+        return <Newspaper className="text-black" size={20} />;
       case "code_snippet":
-        return <Code className="text-slate-900" size={20} />;
+        return <Code className="text-black" size={20} />;
       case "learning_resource":
-        return <GraduationCap className="text-slate-900" size={20} />;
+        return <ExternalLink className="text-black" size={20} />;
+    }
+  };
+
+  const getTypeLabel = () => {
+    switch (type) {
+      case "article":
+        return "Article";
+      case "code_snippet":
+        return "Code Snippet";
+      case "learning_resource":
+        return "Learning Resource";
     }
   };
 
@@ -33,70 +54,151 @@ export default function ResourceCard({ resource, type }: ResourceCardProps) {
     }
   };
 
+  const getEditLink = () => {
+    switch (type) {
+      case "article":
+        return `/articles/${resource.id}/edit`;
+      case "code_snippet":
+        return `/code-snippets/${resource.id}/edit`;
+      case "learning_resource":
+        return `/learning-resources/${resource.id}/edit`;
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(getEditLink());
+  };
+
+  const handleDelete = async () => {
+    try {
+      const apiPath = type === "article" 
+        ? `/api/articles/${resource.id}`
+        : type === "code_snippet"
+        ? `/api/code-snippets/${resource.id}`
+        : `/api/learning-resources/${resource.id}`;
+
+      const response = await fetch(apiPath, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        // Call onDelete callback if provided, otherwise refresh
+        if (onDelete) {
+          onDelete();
+        } else {
+          router.refresh();
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+    }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowDeleteDialog(true);
+  };
+
+  const getDescription = () => {
+    if ("description" in resource && resource.description) {
+      return resource.description;
+    }
+    if ("content" in resource) {
+      return resource.content;
+    }
+    return "";
+  };
+
   return (
-    <Link href={getLink()}>
-      <div className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition cursor-pointer">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
+    <div className="bg-white border border-[rgba(0,0,0,0.12)] rounded-2xl p-4">
+      <div className="flex flex-col gap-2.5 pt-2.5">
+        {/* Header with type badge and action buttons */}
+        <div className="flex items-center justify-between">
+          <div className="bg-white border border-[rgba(0,0,0,0.15)] flex gap-2 h-7 items-center justify-center px-2 rounded-full">
             {getIcon()}
-            <h3 className="text-lg font-semibold text-gray-900">
-              {resource.title}
-            </h3>
+            <p className="font-medium text-sm leading-[14px] text-black">
+              {getTypeLabel()}
+            </p>
           </div>
+          {isOwner && (
+            <div className="flex gap-2.5 items-center">
+              <button onClick={handleEdit} className="w-6 h-6">
+                <Pencil className="text-black" size={24} />
+              </button>
+              <button onClick={handleDeleteClick} className="w-6 h-6">
+                <Trash2 className="text-black" size={24} />
+              </button>
+            </div>
+          )}
         </div>
 
-        {"description" in resource && resource.description && (
-          <p className="text-gray-600 mb-4 line-clamp-2">
-            {resource.description}
+        {/* Title */}
+        <h3 className="font-semibold text-lg leading-7 text-[#0f172a]">
+          {resource.title}
+        </h3>
+
+        {/* Description and View Link */}
+        <div className="flex flex-col gap-2.5">
+          <p className="font-normal text-base leading-7 text-[#0f172a]">
+            {getDescription()}
           </p>
-        )}
-
-        {"content" in resource && (
-          <p className="text-gray-600 mb-4 line-clamp-2">
-            {resource.content.substring(0, 150)}...
-          </p>
-        )}
-
-        {type === "code_snippet" && "language" in resource && (
-          <div className="mb-3">
-            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-              {resource.language}
+          <Link 
+            href={getLink()}
+            className="flex gap-2 items-center"
+          >
+            <ExternalLink className="text-[#0f172a]" size={20} />
+            <span className="font-bold text-base leading-7 text-[#0f172a] underline">
+              View {type === "article" ? "article" : type === "code_snippet" ? "snippet" : "resource"}
             </span>
-          </div>
-        )}
+          </Link>
+        </div>
 
-        {type === "learning_resource" && "resource_type" in resource && (
-          <div className="mb-3">
-            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded capitalize">
-              {resource.resource_type}
-            </span>
-          </div>
-        )}
-
+        {/* Tags */}
         {resource.tags && resource.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {resource.tags.slice(0, 3).map((tag, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 bg-slate-100 text-slate-900 text-xs rounded"
-              >
-                #{tag}
-              </span>
-            ))}
+          <div className="flex flex-col py-1 pt-1 pb-2">
+            <div className="flex flex-wrap gap-2.5">
+              {resource.tags.map((tag, index) => (
+                <div
+                  key={index}
+                  className="bg-white border border-[rgba(0,0,0,0.15)] flex h-[22px] items-center justify-center px-2 rounded-full"
+                >
+                  <p className="font-medium text-xs leading-5 text-black">
+                    {tag}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="flex items-center justify-between text-sm text-gray-500 pt-3 border-t">
-          <div className="flex items-center gap-1">
-            <User size={14} />
-            <span>{resource.author_name || "Anonymous"}</span>
+        {/* Divider */}
+        <div className="h-px w-full bg-[rgba(0,0,0,0.12)]" />
+
+        {/* Footer with author and date */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1 items-center">
+            <CircleUser className="text-black" size={36} />
+            <p className="font-normal text-base leading-7 text-black text-center">
+              {resource.author_name || "You"}
+            </p>
           </div>
-          <div className="flex items-center gap-1">
-            <Calendar size={14} />
-            <span>{formatDate(resource.created_at)}</span>
+          <div className="flex items-center justify-center">
+            <p className="font-normal text-base leading-7 text-[rgba(0,0,0,0.5)] text-center">
+              {formatDate(resource.created_at)}
+            </p>
           </div>
         </div>
       </div>
-    </Link>
+
+      <DeleteDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        resourceType={type === "article" ? "article" : type === "code_snippet" ? "code snippet" : "learning resource"}
+      />
+    </div>
   );
 }
