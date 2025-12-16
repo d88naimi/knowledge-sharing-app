@@ -41,10 +41,12 @@ export default function EditLearningResourcePage() {
           const response = await fetch(`/api/learning-resources/${params.id}`);
           if (response.ok) {
             const data: LearningResource = await response.json();
-            
+
             // Check if user is the author
             if (data.author_id !== session?.user?.id) {
-              setError("You don't have permission to edit this learning resource");
+              setError(
+                "You don't have permission to edit this learning resource"
+              );
               return;
             }
 
@@ -62,7 +64,7 @@ export default function EditLearningResourcePage() {
           setIsLoading(false);
         }
       };
-      
+
       fetchLearningResource();
     }
   }, [status, params.id, router, session?.user?.id]);

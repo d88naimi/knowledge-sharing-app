@@ -35,7 +35,7 @@ export default function EditArticlePage() {
           const response = await fetch(`/api/articles/${params.id}`);
           if (response.ok) {
             const data: Article = await response.json();
-            
+
             // Check if user is the author
             if (data.author_id !== session?.user?.id) {
               setError("You don't have permission to edit this article");
@@ -54,7 +54,7 @@ export default function EditArticlePage() {
           setIsLoading(false);
         }
       };
-      
+
       fetchArticle();
     }
   }, [status, params.id, router, session?.user?.id]);

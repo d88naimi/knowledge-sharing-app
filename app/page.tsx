@@ -74,7 +74,10 @@ export default function Home() {
   };
 
   const filteredResources = resources.filter((resource) => {
-    if (selectedTypes.length > 0 && !selectedTypes.includes(resource.resourceType)) {
+    if (
+      selectedTypes.length > 0 &&
+      !selectedTypes.includes(resource.resourceType)
+    ) {
       return false;
     }
 
@@ -263,7 +266,8 @@ export default function Home() {
             {/* Results Count */}
             <div className="mb-4">
               <p className="font-normal text-[16px] leading-7 text-[#0f172a]">
-                {filteredResources.length} resource{filteredResources.length !== 1 ? 's' : ''} found
+                {filteredResources.length} resource
+                {filteredResources.length !== 1 ? "s" : ""} found
               </p>
             </div>
 

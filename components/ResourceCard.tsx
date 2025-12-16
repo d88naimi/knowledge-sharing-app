@@ -5,7 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { Article, CodeSnippet, LearningResource } from "@/types";
-import { Newspaper, Code, ExternalLink, Pencil, Trash2, CircleUser } from "lucide-react";
+import {
+  Newspaper,
+  Code,
+  ExternalLink,
+  Pencil,
+  Trash2,
+  CircleUser,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import DeleteDialog from "@/components/DeleteDialog";
 
@@ -15,7 +22,11 @@ interface ResourceCardProps {
   onDelete?: () => void;
 }
 
-export default function ResourceCard({ resource, type, onDelete }: ResourceCardProps) {
+export default function ResourceCard({
+  resource,
+  type,
+  onDelete,
+}: ResourceCardProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -73,11 +84,12 @@ export default function ResourceCard({ resource, type, onDelete }: ResourceCardP
 
   const handleDelete = async () => {
     try {
-      const apiPath = type === "article" 
-        ? `/api/articles/${resource.id}`
-        : type === "code_snippet"
-        ? `/api/code-snippets/${resource.id}`
-        : `/api/learning-resources/${resource.id}`;
+      const apiPath =
+        type === "article"
+          ? `/api/articles/${resource.id}`
+          : type === "code_snippet"
+          ? `/api/code-snippets/${resource.id}`
+          : `/api/learning-resources/${resource.id}`;
 
       const response = await fetch(apiPath, {
         method: "DELETE",
@@ -145,13 +157,15 @@ export default function ResourceCard({ resource, type, onDelete }: ResourceCardP
           <p className="font-normal text-base leading-7 text-[#0f172a]">
             {getDescription()}
           </p>
-          <Link 
-            href={getLink()}
-            className="flex gap-2 items-center"
-          >
+          <Link href={getLink()} className="flex gap-2 items-center">
             <ExternalLink className="text-[#0f172a]" size={20} />
             <span className="font-bold text-base leading-7 text-[#0f172a] underline">
-              View {type === "article" ? "article" : type === "code_snippet" ? "snippet" : "resource"}
+              View{" "}
+              {type === "article"
+                ? "article"
+                : type === "code_snippet"
+                ? "snippet"
+                : "resource"}
             </span>
           </Link>
         </div>
@@ -197,7 +211,13 @@ export default function ResourceCard({ resource, type, onDelete }: ResourceCardP
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
-        resourceType={type === "article" ? "article" : type === "code_snippet" ? "code snippet" : "learning resource"}
+        resourceType={
+          type === "article"
+            ? "article"
+            : type === "code_snippet"
+            ? "code snippet"
+            : "learning resource"
+        }
       />
     </div>
   );

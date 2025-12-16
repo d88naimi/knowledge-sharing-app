@@ -58,7 +58,7 @@ export default function EditCodeSnippetPage() {
           const response = await fetch(`/api/code-snippets/${params.id}`);
           if (response.ok) {
             const data: CodeSnippet = await response.json();
-            
+
             // Check if user is the author
             if (data.author_id !== session?.user?.id) {
               setError("You don't have permission to edit this code snippet");
@@ -79,7 +79,7 @@ export default function EditCodeSnippetPage() {
           setIsLoading(false);
         }
       };
-      
+
       fetchCodeSnippet();
     }
   }, [status, params.id, router, session?.user?.id]);
