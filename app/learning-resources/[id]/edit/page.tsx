@@ -105,7 +105,7 @@ export default function EditLearningResourcePage() {
   };
 
   if (status === "loading" || isLoading) {
-    return <div className="max-w-4xl mx-auto">Loading...</div>;
+    return <div className="max-w-4xl mx-auto text-slate-900">Loading...</div>;
   }
 
   if (!session) {
@@ -114,7 +114,7 @@ export default function EditLearningResourcePage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Edit Learning Resource</h1>
+      <h1 className="text-3xl font-bold mb-8 text-slate-900">Edit Learning Resource</h1>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
@@ -129,7 +129,7 @@ export default function EditLearningResourcePage() {
         <div className="mb-6">
           <label
             htmlFor="title"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Title
           </label>
@@ -139,7 +139,7 @@ export default function EditLearningResourcePage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
             placeholder="Enter resource title"
           />
         </div>
@@ -147,7 +147,7 @@ export default function EditLearningResourcePage() {
         <div className="mb-6">
           <label
             htmlFor="url"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             URL
           </label>
@@ -157,7 +157,7 @@ export default function EditLearningResourcePage() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
             placeholder="https://example.com/resource"
           />
         </div>
@@ -165,7 +165,7 @@ export default function EditLearningResourcePage() {
         <div className="mb-6">
           <label
             htmlFor="resourceType"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Resource Type
           </label>
@@ -173,7 +173,7 @@ export default function EditLearningResourcePage() {
             id="resourceType"
             value={resourceType}
             onChange={(e) => setResourceType(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
           >
             {RESOURCE_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -186,7 +186,7 @@ export default function EditLearningResourcePage() {
         <div className="mb-6">
           <label
             htmlFor="description"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Description
           </label>
@@ -195,7 +195,7 @@ export default function EditLearningResourcePage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={6}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
             placeholder="Describe this learning resource (optional)"
           />
         </div>
@@ -203,7 +203,7 @@ export default function EditLearningResourcePage() {
         <div className="mb-6">
           <label
             htmlFor="tags"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Tags
           </label>
@@ -212,10 +212,10 @@ export default function EditLearningResourcePage() {
             id="tags"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
             placeholder="Enter tags separated by commas"
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-slate-600">
             Example: javascript, tutorial, beginner
           </p>
         </div>
@@ -231,7 +231,7 @@ export default function EditLearningResourcePage() {
           <button
             type="button"
             onClick={() => router.push(`/learning-resources/${params.id}`)}
-            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-slate-900"
           >
             Cancel
           </button>

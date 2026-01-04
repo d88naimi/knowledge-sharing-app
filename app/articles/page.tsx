@@ -60,7 +60,7 @@ export default function ArticlesPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Articles</h1>
+        <h1 className="text-3xl font-bold text-slate-900">Articles</h1>
         {session && (
           <Link
             href="/articles/new"

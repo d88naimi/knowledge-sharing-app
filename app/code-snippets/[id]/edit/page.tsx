@@ -120,7 +120,7 @@ export default function EditCodeSnippetPage() {
   };
 
   if (status === "loading" || isLoading) {
-    return <div className="max-w-4xl mx-auto">Loading...</div>;
+    return <div className="max-w-4xl mx-auto text-slate-900">Loading...</div>;
   }
 
   if (!session) {
@@ -129,7 +129,7 @@ export default function EditCodeSnippetPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Edit Code Snippet</h1>
+      <h1 className="text-3xl font-bold mb-8 text-slate-900">Edit Code Snippet</h1>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
@@ -144,7 +144,7 @@ export default function EditCodeSnippetPage() {
         <div className="mb-6">
           <label
             htmlFor="title"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Title
           </label>
@@ -154,7 +154,7 @@ export default function EditCodeSnippetPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
             placeholder="Enter snippet title"
           />
         </div>
@@ -162,7 +162,7 @@ export default function EditCodeSnippetPage() {
         <div className="mb-6">
           <label
             htmlFor="language"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Language
           </label>
@@ -170,7 +170,7 @@ export default function EditCodeSnippetPage() {
             id="language"
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
           >
             {LANGUAGES.map((lang) => (
               <option key={lang} value={lang}>
@@ -183,7 +183,7 @@ export default function EditCodeSnippetPage() {
         <div className="mb-6">
           <label
             htmlFor="code"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Code
           </label>
@@ -193,7 +193,7 @@ export default function EditCodeSnippetPage() {
             onChange={(e) => setCode(e.target.value)}
             required
             rows={12}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent font-mono text-sm"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent font-mono text-sm text-slate-900"
             placeholder="Paste your code here"
           />
         </div>
@@ -201,7 +201,7 @@ export default function EditCodeSnippetPage() {
         <div className="mb-6">
           <label
             htmlFor="description"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Description
           </label>
@@ -210,7 +210,7 @@ export default function EditCodeSnippetPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
             placeholder="Describe what this code does (optional)"
           />
         </div>
@@ -218,7 +218,7 @@ export default function EditCodeSnippetPage() {
         <div className="mb-6">
           <label
             htmlFor="tags"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-slate-900 mb-2"
           >
             Tags
           </label>
@@ -227,10 +227,10 @@ export default function EditCodeSnippetPage() {
             id="tags"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent text-slate-900"
             placeholder="Enter tags separated by commas"
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-slate-600">
             Example: react, hooks, useEffect
           </p>
         </div>
@@ -246,7 +246,7 @@ export default function EditCodeSnippetPage() {
           <button
             type="button"
             onClick={() => router.push(`/code-snippets/${params.id}`)}
-            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-slate-900"
           >
             Cancel
           </button>
