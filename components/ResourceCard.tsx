@@ -131,7 +131,7 @@ export default function ResourceCard({
         <div className="flex items-center justify-between">
           <div className="bg-white border border-[rgba(0,0,0,0.15)] flex gap-2 h-7 items-center justify-center px-2 rounded-full">
             {getIcon()}
-            <p className="font-medium text-sm leading-[14px] text-black">
+            <p className="font-medium text-sm leading-3.5 text-black">
               {getTypeLabel()}
             </p>
           </div>
