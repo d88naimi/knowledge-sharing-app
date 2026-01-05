@@ -60,12 +60,10 @@ Read in this order:
    - Understand the `authorize` function (password verification)
    - See JWT callbacks (session management)
 
-2. [ ] `lib/auth-utils.ts` - Helper function to require authentication in API routes
+2. [ ] `app/api/auth/[...nextauth]/route.ts` - NextAuth API handler (auto-generated)
 
-3. [ ] `app/api/auth/[...nextauth]/route.ts` - NextAuth API handler (auto-generated)
-
-4. [ ] `app/api/auth/signup/route.ts` - User registration endpoint
-   - Uses service_role key to bypass RLS
+3. [ ] `app/api/auth/signup/route.ts` - User registration endpoint
+   - Uses service_role key to bypass RLS for user creation
    - Creates both auth user and profile
 
 #### 5. **Authentication Pages**
