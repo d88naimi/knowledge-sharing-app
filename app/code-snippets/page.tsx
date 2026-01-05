@@ -60,7 +60,7 @@ export default function CodeSnippetsPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Code Snippets</h1>
+        <h1 className="text-3xl font-bold">Code Snippets</h1>
         {session && (
           <Link
             href="/code-snippets/new"

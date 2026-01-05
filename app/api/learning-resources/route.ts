@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { requireAuth } from "@/lib/auth-utils";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// Use service role client to bypass RLS (we handle auth with NextAuth)
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 // GET all learning resources
 export async function GET(request: NextRequest) {
+  const { supabase } = await createServerSupabaseClient();
+
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
@@ -68,8 +58,11 @@ export async function GET(request: NextRequest) {
 
 // POST create new learning resource
 export async function POST(request: NextRequest) {
-  const { error, session } = await requireAuth();
-  if (error) return error;
+  const { supabase, session } = await createServerSupabaseClient();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const body = await request.json();
@@ -82,6 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // RLS policy automatically enforces author_id = current user
     const { data, error: insertError } = await supabase
       .from("learning_resources")
       .insert([
@@ -91,7 +85,7 @@ export async function POST(request: NextRequest) {
           description,
           resource_type,
           tags: tags || [],
-          author_id: session!.user.id,
+          author_id: session.user.id,
         },
       ])
       .select()

@@ -60,7 +60,7 @@ export default function LearningResourcesPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Learning Resources</h1>
+        <h1 className="text-3xl font-bold">Learning Resources</h1>
         {session && (
           <Link
             href="/learning-resources/new"

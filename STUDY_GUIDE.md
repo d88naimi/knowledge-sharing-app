@@ -34,6 +34,7 @@ Understand how data is structured and stored.
   - See the 4 tables: `users`, `articles`, `code_snippets`, `learning_resources`
   - Understand Row Level Security (RLS) policies
   - Note the `author_id` foreign key relationships
+  - **Important**: See `set_user_context()` and `get_current_user_id()` functions for NextAuth integration
 
 #### 3. **TypeScript Types**
 
@@ -104,10 +105,10 @@ Understand how data flows from client to database.
 
 ```typescript
 // All API routes follow this pattern:
-1. Import requireAuth from auth-utils
-2. Check authentication: const { error, session } = await requireAuth()
-3. Use service_role Supabase client (bypasses RLS)
-4. Manually check if user owns the resource before update/delete
+1. Import createServerSupabaseClient from lib/supabase-server
+2. Get Supabase client with user context: const { supabase, session } = await createServerSupabaseClient()
+3. RLS policies automatically enforce permissions
+4. No manual authorization checks needed - database handles it!
 ```
 
 #### 8. **Code Snippets API** (same pattern)
@@ -120,7 +121,7 @@ Understand how data flows from client to database.
 - [ ] `app/api/learning-resources/route.ts`
 - [ ] `app/api/learning-resources/[id]/route.ts`
 
-**Key Concept**: Service role key bypasses RLS. We handle permissions in code using session.user.id checks.
+**Key Concept**: RLS policies enforce permissions at the database level. API routes use `createServerSupabaseClient()` which sets user context for RLS.
 
 ---
 
@@ -178,13 +179,27 @@ Understand how users interact with the app.
 #### 14. **Helper Functions**
 
 - [ ] `lib/utils.ts` - `cn()` for className merging, `formatDate()` for dates
-- [ ] `lib/supabase.ts` - Supabase client initialization (anon key)
+- [ ] `lib/supabase-server.ts` - **Server-side Supabase client with RLS enabled**
+  - Uses anon key (not service role)
+  - Sets user context via `set_user_context()` RPC call
+  - Enables database-level security
 
 ---
 
-## 🔑 Key Architectural Decisions
+RLS (Row Level Security)?
 
-### Why Service Role Key in API Routes?
+- **Security**: Database enforces permissions, not just application code
+- **Defense in Depth**: Even if app code has bugs, database protects data
+- **Less Code**: No manual `if (author_id !== session.user.id)` checks
+- **Pattern**: `createServerSupabaseClient()` sets user context, RLS policies filter/block queries
+
+### How NextAuth + RLS Integration Works
+
+1. User logs in with NextAuth → JWT session created
+2. API route calls `createServerSupabaseClient()` → gets user ID from session
+3. Calls `supabase.rpc('set_user_context', { user_id })` → stores in PostgreSQL transaction
+4. RLS policies call `get_current_user_id()` → retrieves stored user ID
+5. Database automatically filters/blocks based on `author_id = get_current_user_id()`
 
 - **Problem**: NextAuth uses its own auth system, not Supabase Auth
 - **Solution**: Use service_role key to bypass RLS, handle permissions in code
@@ -244,9 +259,10 @@ Check:
 
 ### Understanding Next.js App Router
 
-- **Server vs Client Components**: Pages with `"use client"` are client components
-- **API Routes**: Files in `app/api/` become API endpoints
-- **Dynamic Routes**: `[id]` in filename creates dynamic route
+- **Server vs Client Components**: Pages with `"use client that filter queries
+- **Service Role**: Admin key that bypasses RLS (only used in `lib/auth.ts` for user creation)
+- **Anon Key**: Public key with RLS enforced (used in API routes via `createServerSupabaseClient()`)
+- **User Context**: `set_user_context()` and `get_current_user_id()` functions bridge NextAuth and RLSates dynamic route
 
 ### Understanding NextAuth
 
@@ -270,13 +286,14 @@ Check:
 2. Look at `app/articles/page.tsx` to see how lists work
 3. Look at `app/articles/[id]/page.tsx` to see detail views
 4. Study `components/ResourceCard.tsx` for reusable components
-
-### Intermediate Path (Full Stack)
-
-1. Follow the recommended study order above
-2. Trace one complete CRUD flow (Create → Read → Update → Delete)
-3. Modify something small (add a field, change styling)
-4. Test authentication flow from signup to login
+   how RLS policies work with NextAuth user context
+5. Study `lib/supabase-server.ts` - see how user context is set
+6. Compare database-level security vs. code-based permissions
+7. Study the session management and JWT flow
+8. Follow the recommended study order above
+9. Trace one complete CRUD flow (Create → Read → Update → Delete)
+10. Modify something small (add a field, change styling)
+11. Test authentication flow from signup to login
 
 ### Advanced Path (Architecture)
 

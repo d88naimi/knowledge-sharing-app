@@ -1,38 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { requireAuth } from "@/lib/auth-utils";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// Use service role client to bypass RLS (we handle auth with NextAuth)
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 // GET single article
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { supabase } = await createServerSupabaseClient();
+
   try {
     const { id } = await params;
     const { data, error } = await supabase
-      .from('articles')
-      .select(`
+      .from("articles")
+      .select(
+        `
         *,
         users (
           name
         )
-      `)
-      .eq('id', id)
+      `
+      )
+      .eq("id", id)
       .single();
 
     if (error || !data) {
-      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
+      return NextResponse.json({ error: "Article not found" }, { status: 404 });
     }
 
     const article = {
@@ -43,7 +35,10 @@ export async function GET(
 
     return NextResponse.json(article);
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -52,39 +47,40 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error: authError, session } = await requireAuth();
-  if (authError) return authError;
+  const { supabase, session } = await createServerSupabaseClient();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const { id } = await params;
     const body = await request.json();
     const { title, content, tags } = body;
 
-    // Check if user owns the article
-    const { data: existing } = await supabase
-      .from('articles')
-      .select('author_id')
-      .eq('id', id)
-      .single();
-
-    if (!existing || existing.author_id !== session!.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
+    // RLS policy automatically prevents updating articles not owned by user
+    // No manual authorization check needed!
     const { data, error } = await supabase
-      .from('articles')
+      .from("articles")
       .update({ title, content, tags })
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      // RLS will cause error if user doesn't own the article
+      return NextResponse.json(
+        { error: "Forbidden or not found" },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -93,31 +89,30 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error: authError, session } = await requireAuth();
-  if (authError) return authError;
+  const { supabase, session } = await createServerSupabaseClient();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const { id } = await params;
 
-    // Check if user owns the article
-    const { data: existing } = await supabase
-      .from('articles')
-      .select('author_id')
-      .eq('id', id)
-      .single();
-
-    if (!existing || existing.author_id !== session!.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const { error } = await supabase.from('articles').delete().eq('id', id);
+    // RLS policy automatically prevents deleting articles not owned by user
+    const { error } = await supabase.from("articles").delete().eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Forbidden or not found" },
+        { status: 403 }
+      );
     }
 
-    return NextResponse.json({ message: 'Article deleted' });
+    return NextResponse.json({ message: "Article deleted" });
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
