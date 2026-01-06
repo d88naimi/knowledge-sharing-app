@@ -1,82 +1,57 @@
-"use client";
-
-import { useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import useSWR from "swr";
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import ResourceCard from "@/components/ResourceCard";
-import SearchBar from "@/components/SearchBar";
-import { Article } from "@/types";
+import { authOptions } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+import ArticlesClientWrapper from "@/components/ArticlesClientWrapper";
 
-export default function ArticlesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+export default async function ArticlesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
+  const { search } = await searchParams;
 
-  const url =
-    status === "authenticated"
-      ? searchQuery
-        ? `/api/articles?search=${encodeURIComponent(searchQuery)}`
-        : "/api/articles"
-      : null;
+  // Check authentication on the server
+  const session = await getServerSession(authOptions);
 
-  const { data: articles = [], isLoading } = useSWR<Article[]>(url);
-
-  if (status === "unauthenticated") {
-    router.push("/auth/signin");
-    return null;
+  if (!session) {
+    redirect("/auth/signin");
   }
 
-  if (status === "loading" || isLoading) {
-    return (
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center py-20">
-          <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      </div>
-    );
+  // Fetch articles directly on the server
+  const { supabase } = await createServerSupabaseClient();
+
+  let query = supabase
+    .from("articles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (search) {
+    query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+  }
+
+  const { data: articles, error } = await query;
+
+  if (error) {
+    console.error("Error fetching articles:", error);
   }
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Articles</h1>
-        {session && (
-          <Link
-            href="/articles/new"
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
-          >
-            <Plus size={20} />
-            New Article
-          </Link>
-        )}
+        <Link
+          href="/articles/new"
+          className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
+        >
+          <Plus size={20} />
+          New Article
+        </Link>
       </div>
 
-      <div className="mb-6">
-        <SearchBar onSearch={setSearchQuery} placeholder="Search articles..." />
-      </div>
-
-      {articles.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p>No articles found.</p>
-          {session && (
-            <Link
-              href="/articles/new"
-              className="text-slate-900 hover:underline mt-2 inline-block"
-            >
-              Create the first article
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {articles.map((article) => (
-            <ResourceCard key={article.id} resource={article} type="article" />
-          ))}
-        </div>
-      )}
+      <ArticlesClientWrapper initialArticles={articles || []} />
     </div>
   );
 }

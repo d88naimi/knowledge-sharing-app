@@ -1,61 +1,36 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
-import useSWR from "swr";
-import { Article } from "@/types";
+import { getServerSession } from "next-auth/next";
+import { redirect, notFound } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { formatDate } from "@/lib/utils";
-import DeleteDialog from "@/components/DeleteDialog";
+import ArticleDetailClient from "@/components/ArticleDetailClient";
 
-export default function ArticleDetailPage() {
-  const router = useRouter();
-  const params = useParams();
-  const { data: session, status } = useSession();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+export default async function ArticleDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // Await params in Next.js 15+
+  const { id } = await params;
 
-  const {
-    data: article,
-    error,
-    isLoading,
-  } = useSWR<Article>(
-    status === "authenticated" && params?.id
-      ? `/api/articles/${params.id}`
-      : null,
-    {
-      onError: () => router.push("/articles"),
-    }
-  );
+  // Check authentication on the server
+  const session = await getServerSession(authOptions);
 
-  if (status === "unauthenticated") {
-    router.push("/auth/signin");
-    return null;
+  if (!session) {
+    redirect("/auth/signin");
   }
 
-  const handleDelete = async () => {
-    try {
-      const response = await fetch(`/api/articles/${params?.id}`, {
-        method: "DELETE",
-      });
+  // Fetch article directly on the server
+  const { supabase } = await createServerSupabaseClient();
 
-      if (response.ok) {
-        router.push("/articles");
-      }
-    } catch (error) {
-      console.error("Error deleting article:", error);
-    }
-  };
-
-  if (status === "loading" || isLoading) {
-    return (
-      <div className="text-center py-20">
-        <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  const { data: article, error } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("id", id)
+    .single();
 
   if (error || !article) {
-    return <div>Article not found</div>;
+    notFound();
   }
 
   const isAuthor = session?.user?.id === article.author_id;
@@ -78,7 +53,7 @@ export default function ArticleDetailPage() {
 
         {article.tags && article.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
-            {article.tags.map((tag, index) => (
+            {article.tags.map((tag: string, index: number) => (
               <span
                 key={index}
                 className="px-3 py-1 bg-blue-50 text-blue-600 text-sm rounded-full"
@@ -93,30 +68,8 @@ export default function ArticleDetailPage() {
           <p className="whitespace-pre-wrap">{article.content}</p>
         </div>
 
-        {isAuthor && (
-          <div className="flex gap-4 pt-6 border-t">
-            <button
-              onClick={() => router.push(`/articles/${article.id}/edit`)}
-              className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              className="px-4 py-2 border border-slate-200 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <ArticleDetailClient articleId={article.id} isAuthor={isAuthor} />
       </article>
-
-      <DeleteDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        resourceType="article"
-      />
     </div>
   );
 }

@@ -4,6 +4,10 @@
 
 This is a **full-stack Next.js 16 application** for sharing knowledge resources (articles, code snippets, and learning resources). It uses **NextAuth** for authentication and **Supabase** as the database.
 
+**Architecture:** Server Components (default) for data fetching + Client Components for interactivity.
+
+**Key Pattern:** Pages render on server → fetch data directly from database → pass to client wrappers for interactive features.
+
 ---
 
 ## 📚 Recommended Study Order
@@ -82,15 +86,11 @@ Understand the app structure, navigation, and how data is fetched.
 
 #### 6. **Core Layout Files**
 
-- [ ] `app/layout.tsx` - Root layout with SessionProvider, SWRProvider and Header
-- [ ] `app/page.tsx` - Home page with unified resources using SWR
+- [ ] `app/layout.tsx` - Root layout with SessionProvider and Header
+- [ ] `app/page.tsx` - Home page with unified resources
 - [ ] `components/Header.tsx` - Navigation bar with auth status
-- [ ] `components/SWRProvider.tsx` - **NEW!** Global SWR configuration
-  - Sets up automatic caching and revalidation
-  - Configures global fetcher function
-  - Enables deduplication and focus revalidation
 
-**Key Concept**: Layout wraps all pages. SWRProvider enables efficient data fetching with caching across the entire app.
+**Key Concept**: Layout wraps all pages. Server Components are the default - no "use client" needed for data fetching pages.
 
 ---
 
@@ -106,11 +106,11 @@ Understand how data flows from client to database.
 **Pattern to understand**:
 
 ```typescript
-// All API routes follow this pattern:
-1. Import createServerSupabaseClient from lib/supabase-server
-2. Get Supabase client with user context: const { supabase, session } = await createServerSupabaseClient()
-3. RLS policies automatically enforce permissions
-4. No manual authorization checks needed - database handles it!
+// API routes use service role client (bypasses RLS):
+1. Import createApiSupabaseClient from lib/supabase-api
+2. Get service role Supabase client: const supabase = createApiSupabaseClient()
+3. Manually check session and set author_id
+4. Bypasses RLS for write operations (POST/PUT/DELETE)
 ```
 
 #### 8. **Code Snippets API** (same pattern)
@@ -123,7 +123,7 @@ Understand how data flows from client to database.
 - [ ] `app/api/learning-resources/route.ts`
 - [ ] `app/api/learning-resources/[id]/route.ts`
 
-**Key Concept**: RLS policies enforce permissions at the database level. API routes use `createServerSupabaseClient()` which sets user context for RLS.
+**Key Concept**: API routes use `createApiSupabaseClient()` with service_role key to bypass RLS. They manually validate sessions and set author_id. Server Component pages use `createServerSupabaseClient()` with RLS for secure reads.
 
 ---
 
@@ -133,38 +133,51 @@ Understand how users interact with the app.
 
 #### 10. **Articles Pages**
 
-- [ ] `app/articles/page.tsx` - List all articles with search
-- [ ] `app/articles/[id]/page.tsx` - View single article (with edit/delete for owner)
-- [ ] `app/articles/new/page.tsx` - Create new article form
+- [ ] `app/articles/page.tsx` - **Server Component** - Fetches articles directly from DB
+- [ ] `app/articles/[id]/page.tsx` - **Server Component** - Fetches single article from DB
+- [ ] `app/articles/new/page.tsx` - **Client Component** - Form with state management
+- [ ] `components/ArticlesClientWrapper.tsx` - **Client Component** - Search interaction
+- [ ] `components/ArticleDetailClient.tsx` - **Client Component** - Edit/delete buttons
 
 **Pattern to understand**:
 
 ```typescript
-// All resource pages use SWR for data fetching:
-1. Use useSWR hook instead of useState/useEffect
-2. Conditional fetching: useSWR(authenticated ? url : null)
-3. Use useSession to get current user
-4. Show edit/delete only if session.user.id === resource.author_id
-5. Automatic caching, revalidation, and error handling
+// Server Component pattern (list pages):
+1. Async function (no "use client")
+2. Await params/searchParams (Next.js 15+)
+3. Create Supabase client: createServerSupabaseClient()
+4. Query database directly
+5. Pass data to Client Component wrapper
 
 // Example:
-const { data: articles = [], isLoading } = useSWR<Article[]>(
-  status === "authenticated" ? "/api/articles" : null
-);
+export default async function ArticlesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
+  const { search } = await searchParams; // Must await!
+  const { supabase } = await createServerSupabaseClient();
+  const { data: articles } = await supabase.from('articles').select('*');
+  return <ArticlesClientWrapper initialArticles={articles} search={search} />;
+}
 ```
 
 #### 11. **Code Snippets Pages** (same pattern)
 
-- [ ] `app/code-snippets/page.tsx`
-- [ ] `app/code-snippets/[id]/page.tsx` - **Note: Uses CodeHighlighter component**
-- [ ] `app/code-snippets/new/page.tsx`
+- [ ] `app/code-snippets/page.tsx` - Server Component
+- [ ] `app/code-snippets/[id]/page.tsx` - Server Component
+- [ ] `app/code-snippets/new/page.tsx` - Client Component (form)
+- [ ] `components/CodeSnippetsClientWrapper.tsx` - Client wrapper
+- [ ] `components/CodeSnippetDetailClient.tsx` - Client wrapper
 
 #### 12. **Learning Resources Pages** (same pattern)
 
-- [ ] `app/learning-resources/page.tsx`
-- [ ] `app/learning-resources/[id]/page.tsx`
+- [ ] `app/learning-resources/page.tsx` - Server Component
+- [ ] `app/learning-resources/[id]/page.tsx` - Server Component
+- [ ] `components/LearningResourcesClientWrapper.tsx` - Client wrapper
+- [ ] `components/LearningResourceDetailClient.tsx` - Client wrapper
 
-**Key Concept**: Pages are client components (`"use client"`). They use **SWR hooks** to fetch from API routes with automatic caching and revalidation, not directly from Supabase.
+**Key Concept**: Pages are **Server Components by default**. They fetch data directly from Supabase (not API routes). Client wrapper components handle interactive features (search, edit, delete).
 
 ---
 
@@ -187,10 +200,16 @@ const { data: articles = [], isLoading } = useSWR<Article[]>(
 #### 14. **Helper Functions**
 
 - [ ] `lib/utils.ts` - `cn()` for className merging, `formatDate()` for dates
-- [ ] `lib/supabase-server.ts` - **Server-side Supabase client with RLS enabled**
+- [ ] `lib/supabase-server.ts` - **Server Component Supabase client**
   - Uses anon key (not service role)
+  - Enables Row Level Security (RLS)
+  - Used by Server Component pages for secure reads
   - Sets user context via `set_user_context()` RPC call
-  - Enables database-level security
+- [ ] `lib/supabase-api.ts` - **API Route Supabase client**
+  - Uses service_role key
+  - Bypasses RLS entirely
+  - Used by API routes for write operations
+  - Manual session validation required
 
 ---
 
@@ -201,8 +220,6 @@ RLS (Row Level Security)?
 - **Less Code**: No manual `if (author_id !== session.user.id)` checks
 - **Pattern**: `createServerSupabaseClient()` sets user context, RLS policies filter/block queries
 
-<<<<<<< Updated upstream
-=======
 ### Next.js 15 Async Params?
 
 - **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
@@ -227,7 +244,58 @@ export default async function Page({ params: { id } }) {
 }
 ```
 
->>>>>>> Stashed changes
+### Next.js 15 Async Params?
+
+- **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
+- **Reason**: Performance optimization - enables parallel data fetching
+- **Pattern**: Must `await params` and `await searchParams` before using
+- **Type**: `params: Promise<{ id: string }>` instead of `params: { id: string }`
+- **Common Error**: "Cannot read property 'id' of Promise" - forgot to await
+
+```typescript
+// ✅ Correct
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+}
+
+// ❌ Wrong (causes runtime error)
+export default async function Page({ params: { id } }) {
+  // id is undefined!
+}
+```
+
+# <<<<<<< Updated upstream
+
+### Next.js 15 Async Params?
+
+- **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
+- **Reason**: Performance optimization - enables parallel data fetching
+- **Pattern**: Must `await params` and `await searchParams` before using
+- **Type**: `params: Promise<{ id: string }>` instead of `params: { id: string }`
+- **Common Error**: "Cannot read property 'id' of Promise" - forgot to await
+
+```typescript
+// ✅ Correct
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+}
+
+// ❌ Wrong (causes runtime error)
+export default async function Page({ params: { id } }) {
+  // id is undefined!
+}
+```
+
+> > > > > > > Stashed changes
+
 ### How NextAuth + RLS Integration Works
 
 1. User logs in with NextAuth → JWT session created
@@ -240,25 +308,35 @@ export default async function Page({ params: { id } }) {
 - **Solution**: Use service_role key to bypass RLS, handle permissions in code
 - **Trade-off**: More manual permission checks, but full control
 
-### Why Client Components for Pages?
+### Why Server Components for Pages?
 
-- **Reason**: Need hooks like `useState`, `useEffect`, `useSession`, `useSWR`
-- **Pattern**: Fetch data client-side from API routes using SWR (not directly from DB)
+- **Performance**: Data fetched on server before HTML sent to client
+- **Security**: Direct database access with RLS (no API endpoint needed)
+- **SEO**: Content available for search engines
+- **Less Code**: No useState/useEffect boilerplate for data fetching
+- **Pattern**: Async function queries database, passes data to client wrapper
 
-### Why SWR Instead of Manual Fetching?
+### Why Client Components for Interactivity?
 
-- **Less Code**: Replaces 30-40 lines of useState/useEffect boilerplate per page
-- **Better UX**: Automatic background updates, instant navigation with cached data
-- **Deduplication**: Multiple components requesting same data = single network request
-- **Focus Revalidation**: Data refreshes when user returns to tab
-- **Error Recovery**: Built-in retry logic and error handling
-- **Pattern**: `const { data, isLoading, error } = useSWR(url)` - that's it!
+- **Reason**: Need hooks like `useState`, `useRouter`, event handlers
+- **Pattern**: Receive data as props, handle search/edit/delete actions
+- **Examples**: Search inputs, delete buttons, form submissions
+- **Rule**: Only use "use client" when you need browser-only features
+
+### Why Two Different Supabase Clients?
+
+- **Server Components**: Use `createServerSupabaseClient()` with RLS for secure reads
+- **API Routes**: Use `createApiSupabaseClient()` with service role for writes
+- **Reason**: RLS client works for reads, but set_user_context() RPC doesn't exist for writes
+- **Security**: API routes manually validate sessions and set author_id
+- **Trade-off**: Separate concerns - pages read securely, APIs write with validation
 
 ### Why Separate API Routes?
 
-- **Security**: Never expose service_role key to client
+- **Write Operations**: POST/PUT/DELETE need service role key to bypass RLS
 - **Validation**: Centralized input validation and error handling
 - **Type Safety**: TypeScript types ensure data consistency
+- **Pattern**: Server Components read, API routes write
 
 ---
 

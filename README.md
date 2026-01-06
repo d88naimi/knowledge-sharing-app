@@ -14,12 +14,12 @@ A full-stack web application built with Next.js 16, TypeScript, Tailwind CSS, Ne
 
 ## Tech Stack
 
-- **Framework:** Next.js 16 (App Router)
+- **Framework:** Next.js 16 (App Router with Server Components)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS 4
-- **Authentication:** NextAuth.js
+- **Authentication:** NextAuth.js v4
 - **Database:** Supabase (PostgreSQL)
-- **Data Fetching:** SWR (Stale-While-Revalidate)
+- **Architecture:** Server Components (SSR) + Client Components (interactivity)
 - **Deployment:** Vercel
 
 ## Prerequisites
@@ -107,11 +107,18 @@ knowledge-sharing-app/
 │   ├── Filter.tsx               # Tag filter
 │   ├── CodeHighlighter.tsx      # Syntax highlighting
 │   ├── SessionProvider.tsx      # Auth session wrapper
-│   └── SWRProvider.tsx          # SWR global configuration
+│   ├── ArticlesClientWrapper.tsx       # Client wrapper for articles search
+│   ├── ArticleDetailClient.tsx         # Client wrapper for article actions
+│   ├── CodeSnippetsClientWrapper.tsx   # Client wrapper for snippets search
+│   ├── CodeSnippetDetailClient.tsx     # Client wrapper for snippet actions
+│   ├── LearningResourcesClientWrapper.tsx  # Client wrapper for resources search
+│   └── LearningResourceDetailClient.tsx    # Client wrapper for resource actions
 ├── lib/                         # Utility functions
 │   ├── auth.ts                  # NextAuth configuration
 │   ├── auth-utils.ts            # Auth helper functions
-│   ├── supabase.ts              # Supabase client
+│   ├── supabase.ts              # Supabase base client
+│   ├── supabase-server.ts       # Server Component Supabase client (RLS)
+│   ├── supabase-api.ts          # API route Supabase client (service role)
 │   └── utils.ts                 # General utilities
 ├── types/                       # TypeScript type definitions
 │   ├── supabase.ts              # Database types
@@ -138,23 +145,12 @@ All tables include:
 - Timestamps for creation and updates
 - Row Level Security (RLS) policies
 
-## Data Fetching with SWR
+## Architecture: Server Components + Client Components
 
-This app uses [SWR](https://swr.vercel.app/) for efficient data fetching with automatic caching and revalidation.
+This app uses Next.js 15+ **Server Components** by default for optimal performance, with **Client Components** only where interactivity is needed.
 
-### Benefits
+### Server Components (Default)
 
-<<<<<<< Updated upstream
-- **Automatic Caching** - Data is cached and reused across components
-- **Revalidation** - Automatic background updates when data changes
-- **Deduplication** - Multiple requests to the same endpoint are deduplicated
-- **Focus Revalidation** - Data refreshes when user refocuses the window
-- **Less Boilerplate** - Replaces manual useState/useEffect patterns
-
-### Configuration
-
-Global SWR config is set in `components/SWRProvider.tsx`:
-=======
 **Pages that fetch data:**
 
 - `app/articles/page.tsx` - Articles list
@@ -269,43 +265,26 @@ await supabase.from("articles").insert({ ...data, author_id: session.user.id });
 ### Next.js 15 Async Params
 
 Next.js 15+ requires awaiting `params` and `searchParams`:
->>>>>>> Stashed changes
 
 ```typescript
-<SWRConfig
-  value={{
-    fetcher: (url: string) => fetch(url).then((res) => res.json()),
-    revalidateOnFocus: true,
-    dedupingInterval: 2000, // 2 seconds
-  }}
->
-  {children}
-</SWRConfig>
+// ✅ Correct (Next.js 15+)
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ search?: string }>;
+}) {
+  const { id } = await params;
+  const { search } = await searchParams;
+}
+
+// ❌ Wrong (causes errors)
+export default async function Page({
+  params: { id },  // Cannot destructure Promise
+  searchParams: { search },
+}) { ... }
 ```
-
-### Usage Pattern
-
-```typescript
-// Before: Manual state management
-const [data, setData] = useState([]);
-const [loading, setLoading] = useState(true);
-useEffect(() => {
-  fetch("/api/articles")
-    .then((res) => res.json())
-    .then(setData)
-    .finally(() => setLoading(false));
-}, []);
-
-// After: SWR hook
-const { data = [], isLoading } = useSWR("/api/articles");
-```
-
-### Key Features Used
-
-- **Conditional Fetching**: `useSWR(authenticated ? url : null)`
-- **Error Handling**: `useSWR(url, { onError: () => router.push(...) })`
-- **Manual Revalidation**: `mutate('/api/articles')` to refresh data
-- **Parallel Fetching**: Multiple `useSWR` calls for different resources
 
 ## Deployment
 

@@ -1,58 +1,34 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
-import useSWR from "swr";
-import { LearningResource } from "@/types";
+import { getServerSession } from "next-auth/next";
+import { redirect, notFound } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { formatDate } from "@/lib/utils";
 import { ExternalLink } from "lucide-react";
-import DeleteDialog from "@/components/DeleteDialog";
+import LearningResourceDetailClient from "@/components/LearningResourceDetailClient";
 
-export default function LearningResourceDetailPage() {
-  const router = useRouter();
-  const params = useParams();
-  const { data: session, status } = useSession();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+export default async function LearningResourceDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
-  const { data: resource, isLoading } = useSWR<LearningResource>(
-    status === "authenticated" && params?.id
-      ? `/api/learning-resources/${params.id}`
-      : null,
-    {
-      onError: () => router.push("/learning-resources"),
-    }
-  );
+  const session = await getServerSession(authOptions);
 
-  if (status === "unauthenticated") {
-    router.push("/auth/signin");
-    return null;
+  if (!session) {
+    redirect("/auth/signin");
   }
 
-  const handleDelete = async () => {
-    try {
-      const response = await fetch(`/api/learning-resources/${params?.id}`, {
-        method: "DELETE",
-      });
+  const { supabase } = await createServerSupabaseClient();
 
-      if (response.ok) {
-        router.push("/learning-resources");
-      }
-    } catch (error) {
-      console.error("Error deleting resource:", error);
-    }
-  };
+  const { data: resource, error } = await supabase
+    .from("learning_resources")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  if (status === "loading" || isLoading) {
-    return (
-      <div className="text-center py-20">
-        <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!resource) {
-    return <div>Learning resource not found</div>;
+  if (error || !resource) {
+    notFound();
   }
 
   const isAuthor = session?.user?.id === resource.author_id;
@@ -92,7 +68,7 @@ export default function LearningResourceDetailPage() {
 
         {resource.tags && resource.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
-            {resource.tags.map((tag, index) => (
+            {resource.tags.map((tag: string, index: number) => (
               <span
                 key={index}
                 className="px-3 py-1 bg-slate-100 text-slate-900 text-sm rounded-full"
@@ -103,32 +79,11 @@ export default function LearningResourceDetailPage() {
           </div>
         )}
 
-        {isAuthor && (
-          <div className="flex gap-4 pt-6 border-t">
-            <button
-              onClick={() =>
-                router.push(`/learning-resources/${resource.id}/edit`)
-              }
-              className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              className="px-4 py-2 border border-slate-200 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <LearningResourceDetailClient
+          resourceId={resource.id}
+          isAuthor={isAuthor}
+        />
       </div>
-
-      <DeleteDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        resourceType="learning resource"
-      />
     </div>
   );
 }
