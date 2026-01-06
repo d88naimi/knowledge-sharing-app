@@ -201,6 +201,33 @@ RLS (Row Level Security)?
 - **Less Code**: No manual `if (author_id !== session.user.id)` checks
 - **Pattern**: `createServerSupabaseClient()` sets user context, RLS policies filter/block queries
 
+<<<<<<< Updated upstream
+=======
+### Next.js 15 Async Params?
+
+- **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
+- **Reason**: Performance optimization - enables parallel data fetching
+- **Pattern**: Must `await params` and `await searchParams` before using
+- **Type**: `params: Promise<{ id: string }>` instead of `params: { id: string }`
+- **Common Error**: "Cannot read property 'id' of Promise" - forgot to await
+
+```typescript
+// ✅ Correct
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+}
+
+// ❌ Wrong (causes runtime error)
+export default async function Page({ params: { id } }) {
+  // id is undefined!
+}
+```
+
+>>>>>>> Stashed changes
 ### How NextAuth + RLS Integration Works
 
 1. User logs in with NextAuth → JWT session created

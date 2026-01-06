@@ -144,6 +144,7 @@ This app uses [SWR](https://swr.vercel.app/) for efficient data fetching with au
 
 ### Benefits
 
+<<<<<<< Updated upstream
 - **Automatic Caching** - Data is cached and reused across components
 - **Revalidation** - Automatic background updates when data changes
 - **Deduplication** - Multiple requests to the same endpoint are deduplicated
@@ -153,6 +154,122 @@ This app uses [SWR](https://swr.vercel.app/) for efficient data fetching with au
 ### Configuration
 
 Global SWR config is set in `components/SWRProvider.tsx`:
+=======
+**Pages that fetch data:**
+
+- `app/articles/page.tsx` - Articles list
+- `app/articles/[id]/page.tsx` - Article detail
+- `app/code-snippets/page.tsx` - Code snippets list
+- `app/code-snippets/[id]/page.tsx` - Code snippet detail
+- `app/learning-resources/page.tsx` - Learning resources list
+- `app/learning-resources/[id]/page.tsx` - Learning resource detail
+
+**Benefits:**
+
+- ⚡ **Server-Side Rendering** - Data fetched on server before HTML sent to client
+- 🔒 **Direct Database Access** - Query Supabase directly with Row Level Security
+- 📦 **Smaller Bundle** - No client-side data fetching code shipped
+- 🚀 **Better SEO** - Content available for search engines
+- 💾 **Reduced Client Memory** - No client-side state management
+
+**Pattern:**
+
+```typescript
+// Server Component (async page)
+export default async function ArticlesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
+  const { search } = await searchParams; // Next.js 15: searchParams is a Promise
+  const { supabase, session } = await createServerSupabaseClient();
+
+  // Direct database query
+  let query = supabase.from("articles").select("*");
+  if (search) query = query.ilike("title", `%${search}%`);
+  const { data: articles } = await query;
+
+  // Pass data to Client Component for interactivity
+  return <ArticlesClientWrapper initialArticles={articles} search={search} />;
+}
+```
+
+### Client Components (Interactive Features)
+
+**Client wrapper components:**
+
+- `ArticlesClientWrapper.tsx` - Search input and navigation
+- `ArticleDetailClient.tsx` - Edit/delete buttons with modals
+- Similar wrappers for code snippets and learning resources
+
+**Benefits:**
+
+- 🎯 **Targeted Interactivity** - Only interactive parts run on client
+- 🔄 **State Management** - useState, useRouter for search and forms
+- 🎨 **Event Handlers** - onClick, onChange, onSubmit
+- 📱 **Client-Only APIs** - Browser APIs, local storage
+
+**Pattern:**
+
+```typescript
+// Client Component (marked with "use client")
+"use client";
+
+export default function ArticlesClientWrapper({
+  initialArticles,
+  search,
+}: {
+  initialArticles: Article[];
+  search?: string;
+}) {
+  const router = useRouter();
+  const [searchValue, setSearchValue] = useState(search || "");
+
+  const handleSearch = () => {
+    router.push(`/articles?search=${searchValue}`);
+  };
+
+  return (
+    <>
+      <SearchBar
+        value={searchValue}
+        onChange={setSearchValue}
+        onSearch={handleSearch}
+      />
+      {initialArticles.map((article) => (
+        <ResourceCard key={article.id} {...article} />
+      ))}
+    </>
+  );
+}
+```
+
+### Dual Supabase Client Pattern
+
+**Server Components (RLS-enabled):**
+
+```typescript
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+
+// Uses anon key + Row Level Security
+const { supabase, session } = await createServerSupabaseClient();
+const { data } = await supabase.from("articles").select("*");
+```
+
+**API Routes (Service Role):**
+
+```typescript
+import { createApiSupabaseClient } from "@/lib/supabase-api";
+
+// Uses service_role key to bypass RLS
+const supabase = createApiSupabaseClient();
+await supabase.from("articles").insert({ ...data, author_id: session.user.id });
+```
+
+### Next.js 15 Async Params
+
+Next.js 15+ requires awaiting `params` and `searchParams`:
+>>>>>>> Stashed changes
 
 ```typescript
 <SWRConfig
