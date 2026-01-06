@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import ResourceCard from "@/components/ResourceCard";
@@ -12,38 +13,23 @@ import { Article } from "@/types";
 export default function ArticlesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
-    }
-  }, [status, router]);
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchArticles();
-    }
-  }, [searchQuery, status]);
-
-  const fetchArticles = async () => {
-    try {
-      const url = searchQuery
+  const url =
+    status === "authenticated"
+      ? searchQuery
         ? `/api/articles?search=${encodeURIComponent(searchQuery)}`
-        : "/api/articles";
-      const response = await fetch(url);
-      const data = await response.json();
-      setArticles(data);
-    } catch (error) {
-      console.error("Error fetching articles:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        : "/api/articles"
+      : null;
 
-  if (status === "loading" || loading) {
+  const { data: articles = [], isLoading } = useSWR<Article[]>(url);
+
+  if (status === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
+
+  if (status === "loading" || isLoading) {
     return (
       <div className="max-w-6xl mx-auto">
         <div className="text-center py-20">
@@ -51,10 +37,6 @@ export default function ArticlesPage() {
         </div>
       </div>
     );
-  }
-
-  if (status === "unauthenticated") {
-    return null;
   }
 
   return (

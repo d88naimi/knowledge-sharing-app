@@ -76,17 +76,21 @@ Read in this order:
 
 ---
 
-### **Level 4: Application Layout** (20 min)
+### **Level 4: Application Layout & Data Fetching** (30 min)
 
-Understand the app structure and navigation.
+Understand the app structure, navigation, and how data is fetched.
 
 #### 6. **Core Layout Files**
 
-- [ ] `app/layout.tsx` - Root layout with SessionProvider and Header
-- [ ] `app/page.tsx` - Home page with feature cards
+- [ ] `app/layout.tsx` - Root layout with SessionProvider, SWRProvider and Header
+- [ ] `app/page.tsx` - Home page with unified resources using SWR
 - [ ] `components/Header.tsx` - Navigation bar with auth status
+- [ ] `components/SWRProvider.tsx` - **NEW!** Global SWR configuration
+  - Sets up automatic caching and revalidation
+  - Configures global fetcher function
+  - Enables deduplication and focus revalidation
 
-**Key Concept**: Layout wraps all pages. Header shows different links based on login state.
+**Key Concept**: Layout wraps all pages. SWRProvider enables efficient data fetching with caching across the entire app.
 
 ---
 
@@ -136,11 +140,17 @@ Understand how users interact with the app.
 **Pattern to understand**:
 
 ```typescript
-// All resource pages follow this pattern:
-1. Use useState for local state (loading, data, error)
-2. Use useEffect to fetch data on mount
+// All resource pages use SWR for data fetching:
+1. Use useSWR hook instead of useState/useEffect
+2. Conditional fetching: useSWR(authenticated ? url : null)
 3. Use useSession to get current user
 4. Show edit/delete only if session.user.id === resource.author_id
+5. Automatic caching, revalidation, and error handling
+
+// Example:
+const { data: articles = [], isLoading } = useSWR<Article[]>(
+  status === "authenticated" ? "/api/articles" : null
+);
 ```
 
 #### 11. **Code Snippets Pages** (same pattern)
@@ -154,7 +164,7 @@ Understand how users interact with the app.
 - [ ] `app/learning-resources/page.tsx`
 - [ ] `app/learning-resources/[id]/page.tsx`
 
-**Key Concept**: Pages are client components (`"use client"`). They fetch from API routes, not directly from Supabase.
+**Key Concept**: Pages are client components (`"use client"`). They use **SWR hooks** to fetch from API routes with automatic caching and revalidation, not directly from Supabase.
 
 ---
 
@@ -205,8 +215,17 @@ RLS (Row Level Security)?
 
 ### Why Client Components for Pages?
 
-- **Reason**: Need hooks like `useState`, `useEffect`, `useSession`
-- **Pattern**: Fetch data client-side from API routes (not directly from DB)
+- **Reason**: Need hooks like `useState`, `useEffect`, `useSession`, `useSWR`
+- **Pattern**: Fetch data client-side from API routes using SWR (not directly from DB)
+
+### Why SWR Instead of Manual Fetching?
+
+- **Less Code**: Replaces 30-40 lines of useState/useEffect boilerplate per page
+- **Better UX**: Automatic background updates, instant navigation with cached data
+- **Deduplication**: Multiple components requesting same data = single network request
+- **Focus Revalidation**: Data refreshes when user returns to tab
+- **Error Recovery**: Built-in retry logic and error handling
+- **Pattern**: `const { data, isLoading, error } = useSWR(url)` - that's it!
 
 ### Why Separate API Routes?
 
@@ -322,5 +341,6 @@ After studying this app, you'll understand:
 - ✅ TypeScript for type safety
 - ✅ RESTful API design
 - ✅ Component-based architecture
+- ✅ Efficient data fetching with SWR (caching, revalidation, deduplication)
 
 Good luck with your studies! 🎉
