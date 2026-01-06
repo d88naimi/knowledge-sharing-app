@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import useSWR, { mutate } from "swr";
 import ResourceCard from "@/components/ResourceCard";
 import { Article, CodeSnippet, LearningResource } from "@/types";
 import { Search, SlidersHorizontal } from "lucide-react";
@@ -14,63 +15,50 @@ type UnifiedResource = (Article | CodeSnippet | LearningResource) & {
 export default function Home() {
   const { status } = useSession();
   const router = useRouter();
-  const [resources, setResources] = useState<UnifiedResource[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
-    }
-  }, [status, router]);
+  const { data: articles = [], isLoading: articlesLoading } = useSWR<Article[]>(
+    status === "authenticated" ? "/api/articles" : null
+  );
+  const { data: snippets = [], isLoading: snippetsLoading } = useSWR<
+    CodeSnippet[]
+  >(status === "authenticated" ? "/api/code-snippets" : null);
+  const { data: learningResources = [], isLoading: resourcesLoading } = useSWR<
+    LearningResource[]
+  >(status === "authenticated" ? "/api/learning-resources" : null);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchAllResources();
-    }
-  }, [status]);
+  if (status === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
 
-  const fetchAllResources = async () => {
-    try {
-      const [articlesRes, snippetsRes, resourcesRes] = await Promise.all([
-        fetch("/api/articles"),
-        fetch("/api/code-snippets"),
-        fetch("/api/learning-resources"),
-      ]);
+  const isLoading = articlesLoading || snippetsLoading || resourcesLoading;
 
-      const articles = await articlesRes.json();
-      const snippets = await snippetsRes.json();
-      const learningResources = await resourcesRes.json();
+  const resources: UnifiedResource[] = [
+    ...articles.map((a) => ({
+      ...a,
+      resourceType: "article" as const,
+    })),
+    ...snippets.map((s) => ({
+      ...s,
+      resourceType: "code_snippet" as const,
+    })),
+    ...learningResources.map((r) => ({
+      ...r,
+      resourceType: "learning_resource" as const,
+    })),
+  ].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
-      const unified: UnifiedResource[] = [
-        ...articles.map((a: Article) => ({
-          ...a,
-          resourceType: "article" as const,
-        })),
-        ...snippets.map((s: CodeSnippet) => ({
-          ...s,
-          resourceType: "code_snippet" as const,
-        })),
-        ...learningResources.map((r: LearningResource) => ({
-          ...r,
-          resourceType: "learning_resource" as const,
-        })),
-      ];
-
-      unified.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      setResources(unified);
-    } catch (error) {
-      console.error("Error fetching resources:", error);
-    } finally {
-      setLoading(false);
-    }
+  const refreshAllResources = () => {
+    mutate("/api/articles");
+    mutate("/api/code-snippets");
+    mutate("/api/learning-resources");
   };
 
   const filteredResources = resources.filter((resource) => {
@@ -131,7 +119,7 @@ export default function Home() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-12">
         <div className="text-center py-20">
@@ -139,10 +127,6 @@ export default function Home() {
         </div>
       </div>
     );
-  }
-
-  if (status === "unauthenticated") {
-    return null;
   }
 
   return (
@@ -286,7 +270,7 @@ export default function Home() {
                     key={`${resource.resourceType}-${resource.id}`}
                     resource={resource}
                     type={resource.resourceType}
-                    onDelete={fetchAllResources}
+                    onDelete={refreshAllResources}
                   />
                 ))}
               </div>

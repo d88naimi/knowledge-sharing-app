@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
 import { LearningResource } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { ExternalLink } from "lucide-react";
@@ -12,39 +13,21 @@ export default function LearningResourceDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { data: session, status } = useSession();
-  const [resource, setResource] = useState<LearningResource | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
+  const { data: resource, isLoading } = useSWR<LearningResource>(
+    status === "authenticated" && params?.id
+      ? `/api/learning-resources/${params.id}`
+      : null,
+    {
+      onError: () => router.push("/learning-resources"),
     }
-  }, [status, router]);
+  );
 
-  useEffect(() => {
-    if (params?.id && status === "authenticated") {
-      fetchResource();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params?.id, status]);
-
-  const fetchResource = async () => {
-    try {
-      const response = await fetch(`/api/learning-resources/${params?.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setResource(data);
-      } else {
-        router.push("/learning-resources");
-      }
-    } catch (error) {
-      console.error("Error fetching resource:", error);
-      router.push("/learning-resources");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (status === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
 
   const handleDelete = async () => {
     try {
@@ -60,16 +43,12 @@ export default function LearningResourceDetailPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="text-center py-20">
         <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
-  }
-
-  if (status === "unauthenticated") {
-    return null;
   }
 
   if (!resource) {

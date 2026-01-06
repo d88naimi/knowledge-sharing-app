@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import useSWR from "swr";
 import ResourceCard from "@/components/ResourceCard";
 import SearchBar from "@/components/SearchBar";
 import { LearningResource } from "@/types";
@@ -12,38 +13,23 @@ import { LearningResource } from "@/types";
 export default function LearningResourcesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [resources, setResources] = useState<LearningResource[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
-    }
-  }, [status, router]);
-
-  const fetchResources = useCallback(async () => {
-    if (status !== "authenticated") return;
-
-    try {
-      const url = searchQuery
+  const url =
+    status === "authenticated"
+      ? searchQuery
         ? `/api/learning-resources?search=${encodeURIComponent(searchQuery)}`
-        : "/api/learning-resources";
-      const response = await fetch(url);
-      const data = await response.json();
-      setResources(data);
-    } catch (error) {
-      console.error("Error fetching learning resources:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [searchQuery, status]);
+        : "/api/learning-resources"
+      : null;
 
-  useEffect(() => {
-    fetchResources();
-  }, [fetchResources]);
+  const { data: resources = [], isLoading } = useSWR<LearningResource[]>(url);
 
-  if (status === "loading" || loading) {
+  if (status === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
+
+  if (status === "loading" || isLoading) {
     return (
       <div className="max-w-6xl mx-auto">
         <div className="text-center py-20">
@@ -51,10 +37,6 @@ export default function LearningResourcesPage() {
         </div>
       </div>
     );
-  }
-
-  if (status === "unauthenticated") {
-    return null;
   }
 
   return (
@@ -79,7 +61,7 @@ export default function LearningResourcesPage() {
         />
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-20">
           <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
         </div>

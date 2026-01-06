@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
 import { Article } from "@/types";
 import { formatDate } from "@/lib/utils";
 import DeleteDialog from "@/components/DeleteDialog";
@@ -11,38 +12,25 @@ export default function ArticleDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { data: session, status } = useSession();
-  const [article, setArticle] = useState<Article | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
+  const {
+    data: article,
+    error,
+    isLoading,
+  } = useSWR<Article>(
+    status === "authenticated" && params?.id
+      ? `/api/articles/${params.id}`
+      : null,
+    {
+      onError: () => router.push("/articles"),
     }
-  }, [status, router]);
+  );
 
-  useEffect(() => {
-    if (params?.id && status === "authenticated") {
-      fetchArticle();
-    }
-  }, [params?.id, status]);
-
-  const fetchArticle = async () => {
-    try {
-      const response = await fetch(`/api/articles/${params?.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setArticle(data);
-      } else {
-        router.push("/articles");
-      }
-    } catch (error) {
-      console.error("Error fetching article:", error);
-      router.push("/articles");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (status === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
 
   const handleDelete = async () => {
     try {
@@ -58,7 +46,7 @@ export default function ArticleDetailPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="text-center py-20">
         <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
@@ -66,11 +54,7 @@ export default function ArticleDetailPage() {
     );
   }
 
-  if (status === "unauthenticated") {
-    return null;
-  }
-
-  if (!article) {
+  if (error || !article) {
     return <div>Article not found</div>;
   }
 

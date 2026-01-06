@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import useSWR from "swr";
 import { CodeSnippet } from "@/types";
 import { formatDate } from "@/lib/utils";
 import CodeHighlighter from "@/components/CodeHighlighter";
@@ -12,39 +13,21 @@ export default function CodeSnippetDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { data: session, status } = useSession();
-  const [snippet, setSnippet] = useState<CodeSnippet | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin");
+  const { data: snippet, isLoading } = useSWR<CodeSnippet>(
+    status === "authenticated" && params?.id
+      ? `/api/code-snippets/${params.id}`
+      : null,
+    {
+      onError: () => router.push("/code-snippets"),
     }
-  }, [status, router]);
+  );
 
-  useEffect(() => {
-    if (params?.id && status === "authenticated") {
-      fetchSnippet();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params?.id, status]);
-
-  const fetchSnippet = async () => {
-    try {
-      const response = await fetch(`/api/code-snippets/${params?.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSnippet(data);
-      } else {
-        router.push("/code-snippets");
-      }
-    } catch (error) {
-      console.error("Error fetching snippet:", error);
-      router.push("/code-snippets");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (status === "unauthenticated") {
+    router.push("/auth/signin");
+    return null;
+  }
 
   const handleDelete = async () => {
     try {
@@ -60,16 +43,12 @@ export default function CodeSnippetDetailPage() {
     }
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading" || isLoading) {
     return (
       <div className="text-center py-20">
         <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
-  }
-
-  if (status === "unauthenticated") {
-    return null;
   }
 
   if (!snippet) {

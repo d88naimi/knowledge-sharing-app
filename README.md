@@ -19,6 +19,7 @@ A full-stack web application built with Next.js 16, TypeScript, Tailwind CSS, Ne
 - **Styling:** Tailwind CSS 4
 - **Authentication:** NextAuth.js
 - **Database:** Supabase (PostgreSQL)
+- **Data Fetching:** SWR (Stale-While-Revalidate)
 - **Deployment:** Vercel
 
 ## Prerequisites
@@ -105,7 +106,8 @@ knowledge-sharing-app/
 │   ├── SearchBar.tsx            # Search input
 │   ├── Filter.tsx               # Tag filter
 │   ├── CodeHighlighter.tsx      # Syntax highlighting
-│   └── SessionProvider.tsx      # Auth session wrapper
+│   ├── SessionProvider.tsx      # Auth session wrapper
+│   └── SWRProvider.tsx          # SWR global configuration
 ├── lib/                         # Utility functions
 │   ├── auth.ts                  # NextAuth configuration
 │   ├── auth-utils.ts            # Auth helper functions
@@ -135,6 +137,58 @@ All tables include:
 - Tags for categorization
 - Timestamps for creation and updates
 - Row Level Security (RLS) policies
+
+## Data Fetching with SWR
+
+This app uses [SWR](https://swr.vercel.app/) for efficient data fetching with automatic caching and revalidation.
+
+### Benefits
+
+- **Automatic Caching** - Data is cached and reused across components
+- **Revalidation** - Automatic background updates when data changes
+- **Deduplication** - Multiple requests to the same endpoint are deduplicated
+- **Focus Revalidation** - Data refreshes when user refocuses the window
+- **Less Boilerplate** - Replaces manual useState/useEffect patterns
+
+### Configuration
+
+Global SWR config is set in `components/SWRProvider.tsx`:
+
+```typescript
+<SWRConfig
+  value={{
+    fetcher: (url: string) => fetch(url).then((res) => res.json()),
+    revalidateOnFocus: true,
+    dedupingInterval: 2000, // 2 seconds
+  }}
+>
+  {children}
+</SWRConfig>
+```
+
+### Usage Pattern
+
+```typescript
+// Before: Manual state management
+const [data, setData] = useState([]);
+const [loading, setLoading] = useState(true);
+useEffect(() => {
+  fetch("/api/articles")
+    .then((res) => res.json())
+    .then(setData)
+    .finally(() => setLoading(false));
+}, []);
+
+// After: SWR hook
+const { data = [], isLoading } = useSWR("/api/articles");
+```
+
+### Key Features Used
+
+- **Conditional Fetching**: `useSWR(authenticated ? url : null)`
+- **Error Handling**: `useSWR(url, { onError: () => router.push(...) })`
+- **Manual Revalidation**: `mutate('/api/articles')` to refresh data
+- **Parallel Fetching**: Multiple `useSWR` calls for different resources
 
 ## Deployment
 
