@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 
 // GET all learning resources
 export async function GET(request: NextRequest) {
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   try {
     const { searchParams } = new URL(request.url);
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
 // POST create new learning resource
 export async function POST(request: NextRequest) {
-  const { supabase, session } = await createServerSupabaseClient();
+  const { supabase, session } = await createApiSupabaseClient();
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

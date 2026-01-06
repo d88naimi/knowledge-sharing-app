@@ -1,58 +1,34 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
-import useSWR from "swr";
-import { CodeSnippet } from "@/types";
+import { getServerSession } from "next-auth/next";
+import { redirect, notFound } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { formatDate } from "@/lib/utils";
 import CodeHighlighter from "@/components/CodeHighlighter";
-import DeleteDialog from "@/components/DeleteDialog";
+import CodeSnippetDetailClient from "@/components/CodeSnippetDetailClient";
 
-export default function CodeSnippetDetailPage() {
-  const router = useRouter();
-  const params = useParams();
-  const { data: session, status } = useSession();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+export default async function CodeSnippetDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
-  const { data: snippet, isLoading } = useSWR<CodeSnippet>(
-    status === "authenticated" && params?.id
-      ? `/api/code-snippets/${params.id}`
-      : null,
-    {
-      onError: () => router.push("/code-snippets"),
-    }
-  );
+  const session = await getServerSession(authOptions);
 
-  if (status === "unauthenticated") {
-    router.push("/auth/signin");
-    return null;
+  if (!session) {
+    redirect("/auth/signin");
   }
 
-  const handleDelete = async () => {
-    try {
-      const response = await fetch(`/api/code-snippets/${params?.id}`, {
-        method: "DELETE",
-      });
+  const { supabase } = await createServerSupabaseClient();
 
-      if (response.ok) {
-        router.push("/code-snippets");
-      }
-    } catch (error) {
-      console.error("Error deleting snippet:", error);
-    }
-  };
+  const { data: snippet, error } = await supabase
+    .from("code_snippets")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  if (status === "loading" || isLoading) {
-    return (
-      <div className="text-center py-20">
-        <div className="inline-block w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!snippet) {
-    return <div>Code snippet not found</div>;
+  if (error || !snippet) {
+    notFound();
   }
 
   const isAuthor = session?.user?.id === snippet.author_id;
@@ -82,7 +58,7 @@ export default function CodeSnippetDetailPage() {
 
         {snippet.tags && snippet.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
-            {snippet.tags.map((tag, index) => (
+            {snippet.tags.map((tag: string, index: number) => (
               <span
                 key={index}
                 className="px-3 py-1 bg-blue-50 text-blue-600 text-sm rounded-full"
@@ -97,30 +73,8 @@ export default function CodeSnippetDetailPage() {
           <CodeHighlighter code={snippet.code} language={snippet.language} />
         </div>
 
-        {isAuthor && (
-          <div className="flex gap-4 pt-6 border-t">
-            <button
-              onClick={() => router.push(`/code-snippets/${snippet.id}/edit`)}
-              className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setShowDeleteDialog(true)}
-              className="px-4 py-2 border border-slate-200 text-slate-900 rounded-lg hover:bg-slate-50 transition"
-            >
-              Delete
-            </button>
-          </div>
-        )}
+        <CodeSnippetDetailClient snippetId={snippet.id} isAuthor={isAuthor} />
       </div>
-
-      <DeleteDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDelete}
-        resourceType="code snippet"
-      />
     </div>
   );
 }
