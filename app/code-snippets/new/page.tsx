@@ -188,7 +188,7 @@ export default function NewCodeSnippetPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition disabled:opacity-50"
           >
             {isSubmitting ? "Creating..." : "Create Snippet"}
           </button>
