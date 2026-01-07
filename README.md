@@ -117,8 +117,7 @@ knowledge-sharing-app/
 │   ├── auth.ts                  # NextAuth configuration
 │   ├── auth-utils.ts            # Auth helper functions
 │   ├── supabase.ts              # Supabase base client
-│   ├── supabase-server.ts       # Server Component Supabase client (RLS)
-│   ├── supabase-api.ts          # API route Supabase client (service role)
+│   ├── supabase-api.ts          # Supabase client (service role - used everywhere)
 │   └── utils.ts                 # General utilities
 ├── types/                       # TypeScript type definitions
 │   ├── supabase.ts              # Database types
@@ -140,14 +139,43 @@ The app uses three main tables:
 
 All tables include:
 
-- User authentication and ownership
+- User authentication and ownership (`author_id` foreign key)
 - Tags for categorization
 - Timestamps for creation and updates
-- Row Level Security (RLS) policies
+- Row Level Security (RLS) policies (defined but not actively used)
+
+**Note:** This app uses **code-level permission checks** instead of relying on RLS, since the `set_user_context()` RPC function is not implemented in the database.
 
 ## Architecture: Server Components + Client Components
 
-This app uses Next.js 15+ **Server Components** by default for optimal performance, with **Client Components** only where interactivity is needed.
+This app uses Next.js 16 **Server Components** by default for optimal performance, with **Client Components** only where interactivity is needed.
+
+### Data Flow Overview
+
+**1. User Authentication** (NextAuth)
+
+```
+User logs in → NextAuth creates JWT session → Session stored in cookie
+```
+
+**2. Page Rendering** (Server Components)
+
+```
+Request → Server Component → createApiSupabaseClient() → Query DB → HTML sent to client
+```
+
+**3. User Interaction** (Client Components)
+
+```
+User searches → Client Component updates URL → Server re-renders with new data
+User clicks edit → Client Component navigates → Edit page loads
+```
+
+**4. Data Mutations** (API Routes)
+
+```
+User submits form → POST/PUT/DELETE to API route → Verify session → Check ownership → Update DB
+```
 
 ### Server Components (Default)
 
@@ -177,10 +205,10 @@ export default async function ArticlesPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
-  const { search } = await searchParams; // Next.js 15: searchParams is a Promise
-  const { supabase, session } = await createServerSupabaseClient();
+  const { search } = await searchParams; // Next.js 16: searchParams is a Promise
+  const { supabase, session } = await createApiSupabaseClient();
 
-  // Direct database query
+  // Direct database query (using service role key)
   let query = supabase.from("articles").select("*");
   if (search) query = query.ilike("title", `%${search}%`);
   const { data: articles } = await query;
@@ -240,34 +268,37 @@ export default function ArticlesClientWrapper({
 }
 ```
 
-### Dual Supabase Client Pattern
+### Single Supabase Client Pattern
 
-**Server Components (RLS-enabled):**
+This app uses a **single Supabase client** (`createApiSupabaseClient`) for both Server Components and API routes:
 
-```typescript
-import { createServerSupabaseClient } from "@/lib/supabase-server";
-
-// Uses anon key + Row Level Security
-const { supabase, session } = await createServerSupabaseClient();
-const { data } = await supabase.from("articles").select("*");
-```
-
-**API Routes (Service Role):**
+**Used everywhere (Pages + API routes):**
 
 ```typescript
 import { createApiSupabaseClient } from "@/lib/supabase-api";
 
-// Uses service_role key to bypass RLS
-const supabase = createApiSupabaseClient();
-await supabase.from("articles").insert({ ...data, author_id: session.user.id });
+// Uses service_role key with manual permission checks
+const { supabase, session } = await createApiSupabaseClient();
+const { data } = await supabase.from("articles").select("*");
+
+// Manual authorization for updates/deletes
+if (!session) return { error: "Unauthorized" };
+if (article.author_id !== session.user.id) return { error: "Forbidden" };
 ```
 
-### Next.js 15 Async Params
+**Why service_role everywhere?**
 
-Next.js 15+ requires awaiting `params` and `searchParams`:
+- The `set_user_context()` RPC function is not implemented in the database
+- RLS policies are defined in schema but not actively enforced
+- Manual permission checks in code provide explicit security
+- Easier to debug - all security logic is visible in application code
+
+### Next.js 16 Async Params
+
+Next.js 16 requires awaiting `params` and `searchParams`:
 
 ```typescript
-// ✅ Correct (Next.js 15+)
+// ✅ Correct (Next.js 16)
 export default async function Page({
   params,
   searchParams,

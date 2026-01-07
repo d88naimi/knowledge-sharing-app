@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { createApiSupabaseClient } from "@/lib/supabase-api";
 
 // GET all articles with optional search and filter

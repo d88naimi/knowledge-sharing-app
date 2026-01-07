@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { createApiSupabaseClient } from "@/lib/supabase-api";
 
 // GET single code snippet
@@ -70,7 +69,10 @@ export async function PUT(
       .single();
 
     if (!snippet) {
-      return NextResponse.json({ error: "Code snippet not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Code snippet not found" },
+        { status: 404 }
+      );
     }
 
     if (snippet.author_id !== session.user.id) {
@@ -123,7 +125,10 @@ export async function DELETE(
       .single();
 
     if (!snippet) {
-      return NextResponse.json({ error: "Code snippet not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Code snippet not found" },
+        { status: 404 }
+      );
     }
 
     if (snippet.author_id !== session.user.id) {

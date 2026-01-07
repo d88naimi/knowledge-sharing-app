@@ -6,7 +6,7 @@ This is a **full-stack Next.js 16 application** for sharing knowledge resources 
 
 **Architecture:** Server Components (default) for data fetching + Client Components for interactivity.
 
-**Key Pattern:** Pages render on server → fetch data directly from database → pass to client wrappers for interactive features.
+**Key Pattern:** Pages render on server → fetch data directly from database using service_role client → pass to client wrappers for interactive features.
 
 ---
 
@@ -106,11 +106,12 @@ Understand how data flows from client to database.
 **Pattern to understand**:
 
 ```typescript
-// API routes use service role client (bypasses RLS):
+// All API routes use service role client with manual permission checks:
 1. Import createApiSupabaseClient from lib/supabase-api
-2. Get service role Supabase client: const supabase = createApiSupabaseClient()
-3. Manually check session and set author_id
-4. Bypasses RLS for write operations (POST/PUT/DELETE)
+2. Get Supabase client: const { supabase, session } = await createApiSupabaseClient()
+3. Check session for authentication
+4. For updates/deletes: manually verify author_id === session.user.id
+5. Return appropriate errors (401 Unauthorized, 403 Forbidden, 404 Not Found)
 ```
 
 #### 8. **Code Snippets API** (same pattern)
@@ -123,7 +124,7 @@ Understand how data flows from client to database.
 - [ ] `app/api/learning-resources/route.ts`
 - [ ] `app/api/learning-resources/[id]/route.ts`
 
-**Key Concept**: API routes use `createApiSupabaseClient()` with service_role key to bypass RLS. They manually validate sessions and set author_id. Server Component pages use `createServerSupabaseClient()` with RLS for secure reads.
+**Key Concept**: ALL API routes use `createApiSupabaseClient()` with service_role key. They manually check sessions and verify ownership before allowing updates/deletes. No RLS enforcement - all security is code-based.
 
 ---
 
@@ -141,12 +142,12 @@ Understand how users interact with the app.
 
 **Pattern to understand**:
 
-```typescript
+````typescript
 // Server Component pattern (list pages):
 1. Async function (no "use client")
 2. Await params/searchParams (Next.js 15+)
-3. Create Supabase client: createServerSupabaseClient()
-4. Query database directly
+3. Create Supabase client: createApiSupabaseClient()
+4. Query database directly (using service role key)
 5. Pass data to Client Component wrapper
 
 // Example:
@@ -156,15 +157,9 @@ export default async function ArticlesPage({
   searchParams: Promise<{ search?: string }>;
 }) {
   const { search } = await searchParams; // Must await!
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
   const { data: articles } = await supabase.from('articles').select('*');
   return <ArticlesClientWrapper initialArticles={articles} search={search} />;
-}
-```
-
-#### 11. **Code Snippets Pages** (same pattern)
-
-- [ ] `app/code-snippets/page.tsx` - Server Component
 - [ ] `app/code-snippets/[id]/page.tsx` - Server Component
 - [ ] `app/code-snippets/new/page.tsx` - Client Component (form)
 - [ ] `components/CodeSnippetsClientWrapper.tsx` - Client wrapper
@@ -177,7 +172,7 @@ export default async function ArticlesPage({
 - [ ] `components/LearningResourcesClientWrapper.tsx` - Client wrapper
 - [ ] `components/LearningResourceDetailClient.tsx` - Client wrapper
 
-**Key Concept**: Pages are **Server Components by default**. They fetch data directly from Supabase (not API routes). Client wrapper components handle interactive features (search, edit, delete).
+**Key Concept**: Pages are **Server Components by default**. They fetch data directly from Supabase using service role client (same as API routes). Client wrapper components handle interactive features (search, edit, delete).
 
 ---
 
@@ -200,49 +195,39 @@ export default async function ArticlesPage({
 #### 14. **Helper Functions**
 
 - [ ] `lib/utils.ts` - `cn()` for className merging, `formatDate()` for dates
-- [ ] `lib/supabase-server.ts` - **Server Component Supabase client**
-  - Uses anon key (not service role)
-  - Enables Row Level Security (RLS)
-  - Used by Server Component pages for secure reads
-  - Sets user context via `set_user_context()` RPC call
-- [ ] `lib/supabase-api.ts` - **API Route Supabase client**
-  - Uses service_role key
+- [ ] `lib/supabase-api.ts` - **Supabase client for everything**
+  - Uses service_role key (admin access)
   - Bypasses RLS entirely
-  - Used by API routes for write operations
-  - Manual session validation required
+  - Used by BOTH Server Component pages AND API routes
+  - Returns `{ supabase, session }` - always check session for auth
+  - Manual permission checks required in code
 
 ---
 
-RLS (Row Level Security)?
+## 🔍 Common Questions
 
-- **Security**: Database enforces permissions, not just application code
-- **Defense in Depth**: Even if app code has bugs, database protects data
-- **Less Code**: No manual `if (author_id !== session.user.id)` checks
-- **Pattern**: `createServerSupabaseClient()` sets user context, RLS policies filter/block queries
+### Why Service Role Key Everywhere?
 
-### Next.js 15 Async Params?
+- **Problem**: The `set_user_context()` RPC function doesn't exist in the database
+- **Impact**: RLS policies can't enforce permissions without user context
+- **Solution**: Use service_role key with manual permission checks in application code
+- **Trade-off**: More explicit code-based security vs. database-level enforcement
 
-- **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
-- **Reason**: Performance optimization - enables parallel data fetching
-- **Pattern**: Must `await params` and `await searchParams` before using
-- **Type**: `params: Promise<{ id: string }>` instead of `params: { id: string }`
-- **Common Error**: "Cannot read property 'id' of Promise" - forgot to await
+### How Does Security Work?
 
-```typescript
-// ✅ Correct
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-}
+- **Authentication**: NextAuth validates user sessions
+- **Authorization**: Manual checks in code:
+  ```typescript
+  // Check if user is authenticated
+  if (!session) return { error: "Unauthorized", status: 401 };
 
-// ❌ Wrong (causes runtime error)
-export default async function Page({ params: { id } }) {
-  // id is undefined!
-}
-```
+  // Check if user owns the resource
+  if (resource.author_id !== session.user.id) {
+    return { error: "Forbidden", status: 403 };
+  }
+````
+
+- **Pattern**: Every update/delete operation verifies ownership before proceeding
 
 ### Next.js 15 Async Params?
 
@@ -268,8 +253,6 @@ export default async function Page({ params: { id } }) {
 }
 ```
 
-# <<<<<<< Updated upstream
-
 ### Next.js 15 Async Params?
 
 - **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
@@ -294,24 +277,47 @@ export default async function Page({ params: { id } }) {
 }
 ```
 
-> > > > > > > Stashed changes
+### Next.js 16 Async Params?
 
-### How NextAuth + RLS Integration Works
+- **Breaking Change**: In Next.js 16, `params` and `searchParams` are Promises
+- **Reason**: Performance optimization - enables parallel data fetching
+- **Pattern**: Must `await params` and `await searchParams` before using
+- **Type**: `params: Promise<{ id: string }>` instead of `params: { id: string }`
+- **Common Error**: "Cannot read property 'id' of Promise" - forgot to await
+
+```typescript
+// ✅ Correct
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+}
+
+// ❌ Wrong (causes runtime error)
+export default async function Page({ params: { id } }) {
+  // id is undefined!
+}
+```
+
+### How NextAuth + Supabase Integration Works
 
 1. User logs in with NextAuth → JWT session created
-2. API route calls `createServerSupabaseClient()` → gets user ID from session
-3. Calls `supabase.rpc('set_user_context', { user_id })` → stores in PostgreSQL transaction
-4. RLS policies call `get_current_user_id()` → retrieves stored user ID
-5. Database automatically filters/blocks based on `author_id = get_current_user_id()`
+2. All pages and API routes use `createApiSupabaseClient()` with service_role key
+3. Application code manually checks session for authentication
+4. Application code manually verifies `author_id === session.user.id` for authorization
+5. No RLS enforcement - all security is code-based
 
-- **Problem**: NextAuth uses its own auth system, not Supabase Auth
-- **Solution**: Use service_role key to bypass RLS, handle permissions in code
-- **Trade-off**: More manual permission checks, but full control
+- **Pattern**: Service role key bypasses RLS, permissions handled in application
+- **Security**: Manual checks like `if (!session)` or `if (article.author_id !== session.user.id)`
+- **Trade-off**: More explicit code vs. database-level enforcement
+- **Benefit**: Easier to debug and understand security logic
 
 ### Why Server Components for Pages?
 
 - **Performance**: Data fetched on server before HTML sent to client
-- **Security**: Direct database access with RLS (no API endpoint needed)
+- **Security**: Direct database access with service role key + session validation
 - **SEO**: Content available for search engines
 - **Less Code**: No useState/useEffect boilerplate for data fetching
 - **Pattern**: Async function queries database, passes data to client wrapper
@@ -323,20 +329,21 @@ export default async function Page({ params: { id } }) {
 - **Examples**: Search inputs, delete buttons, form submissions
 - **Rule**: Only use "use client" when you need browser-only features
 
-### Why Two Different Supabase Clients?
+### Why Service Role Key Everywhere?
 
-- **Server Components**: Use `createServerSupabaseClient()` with RLS for secure reads
-- **API Routes**: Use `createApiSupabaseClient()` with service role for writes
-- **Reason**: RLS client works for reads, but set_user_context() RPC doesn't exist for writes
-- **Security**: API routes manually validate sessions and set author_id
-- **Trade-off**: Separate concerns - pages read securely, APIs write with validation
+- **Single Client**: `createApiSupabaseClient()` used in ALL pages and API routes
+- **Reason**: The `set_user_context()` RPC doesn't exist, so RLS can't work
+- **Security**: Manual checks in code - `if (article.author_id !== session.user.id)`
+- **Trade-off**: More explicit permission logic vs. implicit database policies
+- **Benefit**: Easier to debug - security logic is visible in application code
 
-### Why Separate API Routes?
+### Why API Routes?
 
-- **Write Operations**: POST/PUT/DELETE need service role key to bypass RLS
-- **Validation**: Centralized input validation and error handling
+- **Write Operations**: POST/PUT/DELETE centralized in API routes
+- **Validation**: Input validation and error handling in one place
 - **Type Safety**: TypeScript types ensure data consistency
-- **Pattern**: Server Components read, API routes write
+- **Pattern**: Server Components and API routes both use service_role client
+- **Security**: Manual permission checks in both pages and API routes
 
 ---
 
@@ -381,10 +388,10 @@ Check:
 
 ### Understanding Next.js App Router
 
-- **Server vs Client Components**: Pages with `"use client that filter queries
-- **Service Role**: Admin key that bypasses RLS (only used in `lib/auth.ts` for user creation)
-- **Anon Key**: Public key with RLS enforced (used in API routes via `createServerSupabaseClient()`)
-- **User Context**: `set_user_context()` and `get_current_user_id()` functions bridge NextAuth and RLSates dynamic route
+- **Server vs Client Components**: All pages are Server Components by default (async functions), use "use client" only for interactivity
+- **App Router**: File-based routing with layouts, loading states, error boundaries
+- **Dynamic Routes**: `[id]` creates dynamic route segments
+- **Async Components**: Server Components can be async and await data
 
 ### Understanding NextAuth
 
@@ -394,9 +401,9 @@ Check:
 
 ### Understanding Supabase
 
-- **RLS Policies**: Row-level security rules in PostgreSQL
-- **Service Role**: Admin key that bypasses RLS
-- **Anon Key**: Public key with RLS enforced
+- **RLS Policies**: Defined in schema but not actively enforced (service_role bypasses them)
+- **Service Role**: Admin key used everywhere in this app - both pages and API routes
+- **Manual Security**: Application code handles all permission checks
 
 ---
 
@@ -405,13 +412,12 @@ Check:
 ### Beginner Path (Focus on Frontend)
 
 1. Read `types/index.ts` to understand data structures
-2. Look at `app/articles/page.tsx` to see how lists work
+2. Look at `app/articles/page.tsx` to see how Server Components fetch data
 3. Look at `app/articles/[id]/page.tsx` to see detail views
 4. Study `components/ResourceCard.tsx` for reusable components
-   how RLS policies work with NextAuth user context
-5. Study `lib/supabase-server.ts` - see how user context is set
-6. Compare database-level security vs. code-based permissions
-7. Study the session management and JWT flow
+5. Study `lib/supabase-api.ts` - see the service role client setup
+6. Study `app/api/articles/[id]/route.ts` - see manual permission checks
+7. Compare code-based security vs. database RLS approaches
 8. Follow the recommended study order above
 9. Trace one complete CRUD flow (Create → Read → Update → Delete)
 10. Modify something small (add a field, change styling)
@@ -419,10 +425,11 @@ Check:
 
 ### Advanced Path (Architecture)
 
-1. Understand why service_role key is needed
-2. Compare RLS approach vs. code-based permissions
+1. Understand why service_role key is used everywhere
+2. Compare manual permission checks vs. RLS-based security
 3. Study the session management and JWT flow
 4. Consider scaling: What if we had 10,000 users?
+5. Think about security: What if someone bypasses client validation?
 
 ---
 

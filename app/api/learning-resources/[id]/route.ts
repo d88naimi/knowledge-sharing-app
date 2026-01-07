@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { createApiSupabaseClient } from "@/lib/supabase-api";
 
 // GET single learning resource
@@ -70,7 +69,10 @@ export async function PUT(
       .single();
 
     if (!resource) {
-      return NextResponse.json({ error: "Learning resource not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Learning resource not found" },
+        { status: 404 }
+      );
     }
 
     if (resource.author_id !== session.user.id) {
@@ -123,12 +125,17 @@ export async function DELETE(
       .single();
 
     if (!resource) {
-      return NextResponse.json({ error: "Learning resource not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Learning resource not found" },
+        { status: 404 }
+      );
     }
 
     if (resource.author_id !== session.user.id) {
       return NextResponse.json(
-        { error: "Forbidden - you can only delete your own learning resources" },
+        {
+          error: "Forbidden - you can only delete your own learning resources",
+        },
         { status: 403 }
       );
     }
