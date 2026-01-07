@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 
 // GET single learning resource
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   try {
     const { id } = await params;
@@ -50,7 +51,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, session } = await createServerSupabaseClient();
+  const { supabase, session } = await createApiSupabaseClient();
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -61,7 +62,25 @@ export async function PUT(
     const body = await request.json();
     const { title, url, description, resource_type, tags } = body;
 
-    // RLS policy automatically prevents updating resources not owned by user
+    // Check if resource exists and user owns it
+    const { data: resource } = await supabase
+      .from("learning_resources")
+      .select("author_id")
+      .eq("id", id)
+      .single();
+
+    if (!resource) {
+      return NextResponse.json({ error: "Learning resource not found" }, { status: 404 });
+    }
+
+    if (resource.author_id !== session.user.id) {
+      return NextResponse.json(
+        { error: "Forbidden - you can only edit your own learning resources" },
+        { status: 403 }
+      );
+    }
+
+    // Update the resource
     const { data, error } = await supabase
       .from("learning_resources")
       .update({ title, url, description, resource_type, tags })
@@ -70,10 +89,7 @@ export async function PUT(
       .single();
 
     if (error) {
-      return NextResponse.json(
-        { error: "Forbidden or not found" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data);
@@ -90,7 +106,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { supabase, session } = await createServerSupabaseClient();
+  const { supabase, session } = await createApiSupabaseClient();
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -99,17 +115,32 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // RLS policy automatically prevents deleting resources not owned by user
+    // Check if resource exists and user owns it
+    const { data: resource } = await supabase
+      .from("learning_resources")
+      .select("author_id")
+      .eq("id", id)
+      .single();
+
+    if (!resource) {
+      return NextResponse.json({ error: "Learning resource not found" }, { status: 404 });
+    }
+
+    if (resource.author_id !== session.user.id) {
+      return NextResponse.json(
+        { error: "Forbidden - you can only delete your own learning resources" },
+        { status: 403 }
+      );
+    }
+
+    // Delete the resource
     const { error } = await supabase
       .from("learning_resources")
       .delete()
       .eq("id", id);
 
     if (error) {
-      return NextResponse.json(
-        { error: "Forbidden or not found" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ message: "Learning resource deleted" });

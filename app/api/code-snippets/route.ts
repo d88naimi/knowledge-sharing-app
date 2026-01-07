@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
 // POST create new code snippet
 export async function POST(request: NextRequest) {
-  const { supabase, session } = await createServerSupabaseClient();
+  const { supabase, session } = await createApiSupabaseClient();
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
