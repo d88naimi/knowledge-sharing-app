@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 
 // GET all code snippets
 export async function GET(request: NextRequest) {
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   try {
     const { searchParams } = new URL(request.url);
