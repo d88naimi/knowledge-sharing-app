@@ -23,15 +23,29 @@ export default async function ArticleDetailPage({
   // Fetch article directly on the server
   const { supabase } = await createApiSupabaseClient();
 
-  const { data: article, error } = await supabase
+  const { data, error } = await supabase
     .from("articles")
-    .select("*")
+    .select(
+      `
+      *,
+      users (
+        name
+      )
+    `
+    )
     .eq("id", id)
     .single();
 
-  if (error || !article) {
+  if (error || !data) {
     notFound();
   }
+
+  // Transform to include author_name
+  const article = {
+    ...data,
+    author_name: data.users?.name,
+    users: undefined,
+  };
 
   const isAuthor = session?.user?.id === article.author_id;
 

@@ -25,18 +25,33 @@ export default async function ArticlesPage({
 
   let query = supabase
     .from("articles")
-    .select("*")
+    .select(
+      `
+      *,
+      users (
+        name
+      )
+    `
+    )
     .order("created_at", { ascending: false });
 
   if (search) {
     query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
   }
 
-  const { data: articles, error } = await query;
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching articles:", error);
   }
+
+  // Transform to include author_name
+  const articles =
+    data?.map((article: any) => ({
+      ...article,
+      author_name: article.users?.name,
+      users: undefined,
+    })) || [];
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -51,7 +66,7 @@ export default async function ArticlesPage({
         </Link>
       </div>
 
-      <ArticlesClientWrapper initialArticles={articles || []} />
+      <ArticlesClientWrapper initialArticles={articles} />
     </div>
   );
 }
