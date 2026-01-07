@@ -142,9 +142,8 @@ All tables include:
 - User authentication and ownership (`author_id` foreign key)
 - Tags for categorization
 - Timestamps for creation and updates
-- Row Level Security (RLS) policies (defined but not actively used)
 
-**Note:** This app uses **code-level permission checks** instead of relying on RLS, since the `set_user_context()` RPC function is not implemented in the database.
+**Security Model:** This app uses **code-level permission checks** with manual authorization in application code. All database operations use the service_role key, and permissions are enforced through session validation and ownership verification in the application layer.
 
 ## Architecture: Server Components + Client Components
 

@@ -59,52 +59,9 @@ CREATE INDEX IF NOT EXISTS idx_learning_resources_created ON public.learning_res
 CREATE INDEX IF NOT EXISTS idx_learning_resources_tags ON public.learning_resources USING GIN(tags);
 CREATE INDEX IF NOT EXISTS idx_learning_resources_type ON public.learning_resources(resource_type);
 
--- Enable Row Level Security
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.articles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.code_snippets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.learning_resources ENABLE ROW LEVEL SECURITY;
-
--- Create functions for NextAuth + RLS integration
-CREATE OR REPLACE FUNCTION set_user_context(user_id UUID)
-RETURNS VOID AS $$
-BEGIN
-  PERFORM set_config('app.current_user_id', user_id::text, false);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE OR REPLACE FUNCTION get_current_user_id()
-RETURNS UUID AS $$
-BEGIN
-  RETURN current_setting('app.current_user_id', true)::UUID;
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- RLS Policies for users table
-CREATE POLICY "Users can view all profiles" ON public.users FOR SELECT USING (true);
-CREATE POLICY "Users can insert own profile" ON public.users FOR INSERT WITH CHECK (id = get_current_user_id());
-CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (id = get_current_user_id());
-
--- RLS Policies for articles
-CREATE POLICY "Anyone can view articles" ON public.articles FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can create articles" ON public.articles FOR INSERT WITH CHECK (author_id = get_current_user_id());
-CREATE POLICY "Users can update own articles" ON public.articles FOR UPDATE USING (author_id = get_current_user_id());
-CREATE POLICY "Users can delete own articles" ON public.articles FOR DELETE USING (author_id = get_current_user_id());
-
--- RLS Policies for code_snippets
-CREATE POLICY "Anyone can view code snippets" ON public.code_snippets FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can create code snippets" ON public.code_snippets FOR INSERT WITH CHECK (author_id = get_current_user_id());
-CREATE POLICY "Users can update own code snippets" ON public.code_snippets FOR UPDATE USING (author_id = get_current_user_id());
-CREATE POLICY "Users can delete own code snippets" ON public.code_snippets FOR DELETE USING (author_id = get_current_user_id());
-
--- RLS Policies for learning_resources
-CREATE POLICY "Anyone can view learning resources" ON public.learning_resources FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can create learning resources" ON public.learning_resources FOR INSERT WITH CHECK (author_id = get_current_user_id());
-CREATE POLICY "Users can update own learning resources" ON public.learning_resources FOR UPDATE USING (author_id = get_current_user_id());
-CREATE POLICY "Users can delete own learning resources" ON public.learning_resources FOR DELETE USING (author_id = get_current_user_id());
+-- Note: This schema does not use Row Level Security (RLS)
+-- The application uses service_role key with manual permission checks in code
+-- All authorization is handled at the application layer via NextAuth sessions
 
 -- Create trigger function for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -36,9 +36,9 @@ Understand how data is structured and stored.
 
 - [ ] `supabase-schema.sql` - **START HERE!** The entire database structure
   - See the 4 tables: `users`, `articles`, `code_snippets`, `learning_resources`
-  - Understand Row Level Security (RLS) policies
+  - Note: No Row Level Security (RLS) - app uses manual permission checks in code
   - Note the `author_id` foreign key relationships
-  - **Important**: See `set_user_context()` and `get_current_user_id()` functions for NextAuth integration
+  - See the `updated_at` triggers for automatic timestamp updates
 
 #### 3. **TypeScript Types**
 
@@ -208,10 +208,11 @@ export default async function ArticlesPage({
 
 ### Why Service Role Key Everywhere?
 
-- **Problem**: The `set_user_context()` RPC function doesn't exist in the database
-- **Impact**: RLS policies can't enforce permissions without user context
-- **Solution**: Use service_role key with manual permission checks in application code
-- **Trade-off**: More explicit code-based security vs. database-level enforcement
+- **Architecture**: Single client pattern - `createApiSupabaseClient()` everywhere
+- **Simplicity**: No database-level RLS complexity to manage
+- **Security**: Manual checks in code - `if (!session)` or `if (article.author_id !== session.user.id)`
+- **Explicit**: All permission logic is visible and traceable in application code
+- **Benefit**: Easier to debug - security logic is in TypeScript, not SQL policies
 
 ### How Does Security Work?
 
@@ -229,55 +230,7 @@ export default async function ArticlesPage({
 
 - **Pattern**: Every update/delete operation verifies ownership before proceeding
 
-### Next.js 15 Async Params?
-
-- **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
-- **Reason**: Performance optimization - enables parallel data fetching
-- **Pattern**: Must `await params` and `await searchParams` before using
-- **Type**: `params: Promise<{ id: string }>` instead of `params: { id: string }`
-- **Common Error**: "Cannot read property 'id' of Promise" - forgot to await
-
-```typescript
-// ✅ Correct
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-}
-
-// ❌ Wrong (causes runtime error)
-export default async function Page({ params: { id } }) {
-  // id is undefined!
-}
-```
-
-### Next.js 15 Async Params?
-
-- **Breaking Change**: In Next.js 15+, `params` and `searchParams` are Promises
-- **Reason**: Performance optimization - enables parallel data fetching
-- **Pattern**: Must `await params` and `await searchParams` before using
-- **Type**: `params: Promise<{ id: string }>` instead of `params: { id: string }`
-- **Common Error**: "Cannot read property 'id' of Promise" - forgot to await
-
-```typescript
-// ✅ Correct
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-}
-
-// ❌ Wrong (causes runtime error)
-export default async function Page({ params: { id } }) {
-  // id is undefined!
-}
-```
-
-### Next.js 16 Async Params?
+### Next.js 16 Async Params
 
 - **Breaking Change**: In Next.js 16, `params` and `searchParams` are Promises
 - **Reason**: Performance optimization - enables parallel data fetching
@@ -332,7 +285,7 @@ export default async function Page({ params: { id } }) {
 ### Why Service Role Key Everywhere?
 
 - **Single Client**: `createApiSupabaseClient()` used in ALL pages and API routes
-- **Reason**: The `set_user_context()` RPC doesn't exist, so RLS can't work
+- **Simplicity**: No database-level RLS to configure or maintain
 - **Security**: Manual checks in code - `if (article.author_id !== session.user.id)`
 - **Trade-off**: More explicit permission logic vs. implicit database policies
 - **Benefit**: Easier to debug - security logic is visible in application code
@@ -401,9 +354,9 @@ Check:
 
 ### Understanding Supabase
 
-- **RLS Policies**: Defined in schema but not actively enforced (service_role bypasses them)
-- **Service Role**: Admin key used everywhere in this app - both pages and API routes
-- **Manual Security**: Application code handles all permission checks
+- **No RLS**: Row Level Security is not used in this application
+- **Service Role**: Admin key used everywhere - both pages and API routes
+- **Manual Security**: Application code handles all permission checks via NextAuth sessions
 
 ---
 
@@ -417,16 +370,15 @@ Check:
 4. Study `components/ResourceCard.tsx` for reusable components
 5. Study `lib/supabase-api.ts` - see the service role client setup
 6. Study `app/api/articles/[id]/route.ts` - see manual permission checks
-7. Compare code-based security vs. database RLS approaches
-8. Follow the recommended study order above
-9. Trace one complete CRUD flow (Create → Read → Update → Delete)
-10. Modify something small (add a field, change styling)
-11. Test authentication flow from signup to login
+7. Follow the recommended study order above
+8. Trace one complete CRUD flow (Create → Read → Update → Delete)
+9. Modify something small (add a field, change styling)
+10. Test authentication flow from signup to login
 
 ### Advanced Path (Architecture)
 
 1. Understand why service_role key is used everywhere
-2. Compare manual permission checks vs. RLS-based security
+2. Study manual permission checks vs. other security approaches
 3. Study the session management and JWT flow
 4. Consider scaling: What if we had 10,000 users?
 5. Think about security: What if someone bypasses client validation?
