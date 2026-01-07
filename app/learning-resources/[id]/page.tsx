@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect, notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 import { formatDate } from "@/lib/utils";
 import { ExternalLink } from "lucide-react";
 import LearningResourceDetailClient from "@/components/LearningResourceDetailClient";
@@ -19,7 +19,7 @@ export default async function LearningResourceDetailPage({
     redirect("/auth/signin");
   }
 
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   const { data: resource, error } = await supabase
     .from("learning_resources")

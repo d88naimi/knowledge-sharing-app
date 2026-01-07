@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { authOptions } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 import LearningResourcesClientWrapper from "@/components/LearningResourcesClientWrapper";
 
 export default async function LearningResourcesPage({
@@ -19,7 +19,7 @@ export default async function LearningResourcesPage({
     redirect("/auth/signin");
   }
 
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   let query = supabase
     .from("learning_resources")

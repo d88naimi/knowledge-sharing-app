@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { authOptions } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 import ArticlesClientWrapper from "@/components/ArticlesClientWrapper";
 
 export default async function ArticlesPage({
@@ -21,7 +21,7 @@ export default async function ArticlesPage({
   }
 
   // Fetch articles directly on the server
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   let query = supabase
     .from("articles")

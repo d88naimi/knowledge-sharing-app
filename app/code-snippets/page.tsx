@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { authOptions } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 import CodeSnippetsClientWrapper from "@/components/CodeSnippetsClientWrapper";
 
 export default async function CodeSnippetsPage({
@@ -19,7 +19,7 @@ export default async function CodeSnippetsPage({
     redirect("/auth/signin");
   }
 
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   let query = supabase
     .from("code_snippets")

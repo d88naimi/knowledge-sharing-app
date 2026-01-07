@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect, notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 import { formatDate } from "@/lib/utils";
 import ArticleDetailClient from "@/components/ArticleDetailClient";
 
@@ -21,7 +21,7 @@ export default async function ArticleDetailPage({
   }
 
   // Fetch article directly on the server
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   const { data: article, error } = await supabase
     .from("articles")

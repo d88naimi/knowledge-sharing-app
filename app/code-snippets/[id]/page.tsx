@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect, notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { createApiSupabaseClient } from "@/lib/supabase-api";
 import { formatDate } from "@/lib/utils";
 import CodeHighlighter from "@/components/CodeHighlighter";
 import CodeSnippetDetailClient from "@/components/CodeSnippetDetailClient";
@@ -19,7 +19,7 @@ export default async function CodeSnippetDetailPage({
     redirect("/auth/signin");
   }
 
-  const { supabase } = await createServerSupabaseClient();
+  const { supabase } = await createApiSupabaseClient();
 
   const { data: snippet, error } = await supabase
     .from("code_snippets")
