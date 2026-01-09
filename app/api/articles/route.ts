@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiSupabaseClient } from "@/lib/supabase-api";
+import { ArticleWithUser } from "@/types";
 
 // GET all articles with optional search and filter
 export async function GET(request: NextRequest) {
@@ -37,9 +38,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to include author_name
-    const articles = data.map((article: any) => ({
+    const articles = data.map((article: ArticleWithUser) => ({
       ...article,
-      author_name: article.users?.name,
+      author_name: article.users?.name ?? undefined,
       users: undefined,
     }));
 

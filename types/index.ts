@@ -11,6 +11,11 @@ export interface Article {
   updated_at: string;
 }
 
+// Type for articles fetched from Supabase with joined user data
+export type ArticleWithUser = Omit<Article, 'author_name'> & {
+  users: { name: string | null } | null;
+};
+
 export interface CodeSnippet {
   id: string;
   title: string;

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { authOptions } from "@/lib/auth";
 import { createApiSupabaseClient } from "@/lib/supabase-api";
 import ArticlesClientWrapper from "@/components/ArticlesClientWrapper";
+import { ArticleWithUser } from "@/types";
 
 export default async function ArticlesPage({
   searchParams,
@@ -47,9 +48,9 @@ export default async function ArticlesPage({
 
   // Transform to include author_name
   const articles =
-    data?.map((article: any) => ({
+    data?.map((article: ArticleWithUser) => ({
       ...article,
-      author_name: article.users?.name,
+      author_name: article.users?.name ?? undefined,
       users: undefined,
     })) || [];
 
