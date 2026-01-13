@@ -20,6 +20,12 @@ export default function Home() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
+  const resourceTypes = [
+    { value: "article", label: "Articles" },
+    { value: "code_snippet", label: "Code Snippets" },
+    { value: "learning_resource", label: "Learning Resources" },
+  ] as const;
+
   const { data: articles = [], isLoading: articlesLoading } = useSWR<Article[]>(
     status === "authenticated" ? "/api/articles" : null
   );
@@ -182,39 +188,22 @@ export default function Home() {
                     Resource Type
                   </p>
                   <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedTypes.includes("article")}
-                        onChange={() => toggleType("article")}
-                        className="w-3.5 h-3.5 border border-[#e5e7eb] rounded-sm"
-                      />
-                      <span className="font-medium text-[14px] leading-3.5 text-black">
-                        Articles
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedTypes.includes("code_snippet")}
-                        onChange={() => toggleType("code_snippet")}
-                        className="w-3.5 h-3.5 border border-[#e5e7eb] rounded-sm"
-                      />
-                      <span className="font-medium text-[14px] leading-3.5 text-black">
-                        Code Snippets
-                      </span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedTypes.includes("learning_resource")}
-                        onChange={() => toggleType("learning_resource")}
-                        className="w-3.5 h-3.5 border border-[#e5e7eb] rounded-sm"
-                      />
-                      <span className="font-medium text-[14px] leading-3.5 text-black">
-                        Learning Resources
-                      </span>
-                    </label>
+                    {resourceTypes.map(({ value, label }) => (
+                      <label
+                        key={value}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes(value)}
+                          onChange={() => toggleType(value)}
+                          className="w-3.5 h-3.5 border border-[#e5e7eb] rounded-sm"
+                        />
+                        <span className="font-medium text-[14px] leading-3.5 text-black">
+                          {label}
+                        </span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
